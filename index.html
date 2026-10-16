@@ -110,7 +110,7 @@ label,.lbl{display:block; font-size:13px; font-weight:700; letter-spacing:.06em;
 input[type=text],input[type=search],input[type=tel],input[type=email],input[type=password],select,textarea{
   width:100%; font:inherit; font-size:16px; color:var(--ink); background:var(--field); border:1px solid var(--line); border-radius:12px; padding:13px 14px;
 }
-input[type=password]{letter-spacing:.3em; font-family:var(--f-mono)}
+input[type=password]{font-family:var(--f-mono)}
 textarea{min-height:110px; resize:vertical; font-family:var(--f-mono); font-size:13px}
 input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid var(--accent); outline-offset:2px}
 .btn{font:inherit; font-weight:700; font-size:16px; border-radius:14px; border:1px solid var(--line); background:var(--surface); color:var(--ink); padding:13px 16px; cursor:pointer; min-height:50px; width:100%}
@@ -187,44 +187,16 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
 
 <main class="gut"><div class="in">
 
-  <!-- Primer ingreso -->
-  <section class="view" id="v-setup" hidden>
-    <div class="hero">
-      <h1>🛡️ Primer ingreso</h1>
-      <p>Creá el perfil de administrador. Desde ahí vas a dar de alta a los vigiladores y a los demás administradores.</p>
-    </div>
-    <form class="panel" id="f-setup" autocomplete="off">
-      <div><label for="s-nombre">Nombre y apellido</label><input type="text" id="s-nombre" required></div>
-      <div class="row">
-        <div><label for="s-pin">PIN (4 a 6 números)</label><input type="password" id="s-pin" inputmode="numeric" maxlength="6" autocomplete="new-password" required></div>
-        <div><label for="s-pin2">Repetir PIN</label><input type="password" id="s-pin2" inputmode="numeric" maxlength="6" autocomplete="new-password" required></div>
-      </div>
-      <p class="err" id="err-setup" role="alert"></p>
-      <button class="btn primary" type="submit">Crear administrador</button>
-    </form>
-    <div class="panel">
-      <details class="det">
-        <summary>Ya tengo la configuración de otro celular</summary>
-        <div class="det-body">
-          <p class="hint">En el celular donde ya está todo cargado, entrá como administrador, andá a Ajustes y tocá “Copiar configuración”. Pegala acá para traer perfiles y moradores.</p>
-          <textarea id="s-cfg" placeholder="Pegá la configuración acá" aria-label="Configuración a importar"></textarea>
-          <p class="err" id="err-s-cfg" role="alert"></p>
-          <button class="btn" type="button" id="s-import">Importar configuración</button>
-        </div>
-      </details>
-    </div>
-  </section>
-
   <!-- Ingreso -->
   <section class="view" id="v-login" hidden>
     <div class="hero">
       <h1>🔐 Ingresá</h1>
-      <p>Elegí tu perfil y escribí tu PIN.</p>
+      <p>Escribí tu usuario y tu contraseña. Si no tenés, pedísela a un administrador.</p>
     </div>
-    <div class="panel" id="login-list"></div>
-    <form class="panel" id="f-login" autocomplete="off" hidden>
-      <div class="sheet-head"><span class="dest" id="login-name"></span><button type="button" class="btn small" id="login-back">Cambiar</button></div>
-      <div><label for="l-pin">PIN</label><input type="password" id="l-pin" inputmode="numeric" maxlength="6" autocomplete="off" required></div>
+    <form class="panel" id="f-login" autocomplete="on">
+      <div><label for="l-user">Usuario</label><input type="text" id="l-user" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required></div>
+      <div><label for="l-pass">Contraseña</label><input type="password" id="l-pass" autocomplete="current-password" maxlength="40" required></div>
+      <p class="hint">Si tu perfil ya existía, tu usuario es tu nombre y apellido (podés escribirlo con espacios) y tu contraseña es la de siempre.</p>
       <p class="err" id="err-login" role="alert"></p>
       <button class="btn primary" type="submit">Ingresar</button>
     </form>
@@ -334,11 +306,26 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     <button class="back" data-go="home">← Inicio</button>
     <h2>Mis moradores</h2>
 
+    <div class="panel admin-only" id="p-serv">
+      <span class="lbl" style="margin:0" id="serv-count">Servicios</span>
+      <p class="hint">Cargá primero los servicios (edificios, barrios o puestos). Después se eligen de un desplegable al agregar cada morador.</p>
+      <form class="row" id="f-serv" autocomplete="off" style="align-items:flex-end">
+        <div><label for="s-nombre">Nuevo servicio</label><input type="text" id="s-nombre" maxlength="80" placeholder="Ej.: Torre Norte" required></div>
+        <button class="btn primary" type="submit" style="flex:0 0 auto">Agregar</button>
+      </form>
+      <p class="err" id="err-serv" role="alert"></p>
+      <div id="serv-lista"></div>
+    </div>
+
     <form class="panel admin-only" id="f-mor" autocomplete="off">
       <div class="sheet-head"><span class="lbl" style="margin:0" id="mor-form-title">Agregar morador</span><button type="button" class="btn small" id="mor-cancel" hidden>Cancelar</button></div>
       <div>
         <label for="m-nombre">Nombre y apellido</label>
         <input type="text" id="m-nombre" required>
+      </div>
+      <div>
+        <label for="m-servicio">Servicio al que pertenece</label>
+        <select id="m-servicio"></select>
       </div>
       <div class="row">
         <div><label for="m-unidad">Unidad</label><input type="text" id="m-unidad" placeholder="Ej.: 4° B" required></div>
@@ -351,7 +338,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
 
     <div class="panel admin-only">
       <span class="lbl" style="margin:0">Cargar lista completa</span>
-      <p class="hint">Subí un archivo Excel (.xlsx) o CSV, o pegá el texto. Una fila por morador con las columnas nombre, unidad y teléfono del propietario. Si la primera fila tiene títulos, se reconocen solos. El teléfono es obligatorio: las filas sin teléfono válido no se importan.</p>
+      <p class="hint">Subí un archivo Excel (.xlsx) o CSV, o pegá el texto. Una fila por morador con las columnas nombre, unidad, teléfono del propietario y, si querés, servicio. Si la primera fila tiene títulos, se reconocen solos. El teléfono es obligatorio: las filas sin teléfono válido no se importan.</p>
       <div class="row">
         <label class="btn" for="mor-file" style="margin:0; text-align:center; text-transform:none; letter-spacing:0; font-size:16px; color:var(--ink); display:flex; align-items:center; justify-content:center">📄 Elegir archivo</label>
         <input type="file" id="mor-file" accept=".xlsx,.xls,.csv,.tsv,.txt,text/csv,text/plain" hidden>
@@ -377,15 +364,18 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     <h2>Usuarios</h2>
     <form class="panel" id="f-user" autocomplete="off">
       <div class="sheet-head"><span class="lbl" style="margin:0" id="user-form-title">Nuevo perfil</span><button type="button" class="btn small" id="user-cancel" hidden>Cancelar</button></div>
-      <div><label for="u-nombre">Nombre y apellido</label><input type="text" id="u-nombre" required></div>
+      <div class="row">
+        <div><label for="u-nombre">Nombre y apellido</label><input type="text" id="u-nombre" required></div>
+        <div><label for="u-usuario">Usuario</label><input type="text" id="u-usuario" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="ej.: jperez" required></div>
+      </div>
       <div class="row">
         <div>
           <label for="u-rol">Perfil</label>
           <select id="u-rol"><option value="vigilador">Vigilador</option><option value="admin">Administrador</option></select>
         </div>
-        <div><label for="u-pin" id="u-pin-lbl">PIN (4 a 6 números)</label><input type="password" id="u-pin" inputmode="numeric" maxlength="6" autocomplete="new-password"></div>
+        <div><label for="u-pin" id="u-pin-lbl">Contraseña (mínimo 6 caracteres)</label><input type="password" id="u-pin" maxlength="40" autocomplete="new-password"></div>
       </div>
-      <p class="hint">Los vigiladores cargan y entregan paquetes. Los administradores además manejan moradores, usuarios y ajustes.</p>
+      <p class="hint">El usuario va en minúsculas y sin espacios. Los vigiladores cargan y entregan paquetes. Los administradores además manejan moradores, usuarios y ajustes.</p>
       <p class="err" id="err-user" role="alert"></p>
       <button class="btn primary" type="submit">Guardar perfil</button>
     </form>
@@ -403,14 +393,14 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
       <div id="cuenta-info"></div>
     </div>
     <form class="panel" id="f-pin" autocomplete="off">
-      <span class="lbl" style="margin:0">Cambiar mi PIN</span>
-      <div><label for="p-actual">PIN actual</label><input type="password" id="p-actual" inputmode="numeric" maxlength="6" autocomplete="off" required></div>
+      <span class="lbl" style="margin:0">Cambiar mi contraseña</span>
+      <div><label for="p-actual">Contraseña actual</label><input type="password" id="p-actual" maxlength="40" autocomplete="current-password" required></div>
       <div class="row">
-        <div><label for="p-nuevo">PIN nuevo</label><input type="password" id="p-nuevo" inputmode="numeric" maxlength="6" autocomplete="new-password" required></div>
-        <div><label for="p-nuevo2">Repetir PIN nuevo</label><input type="password" id="p-nuevo2" inputmode="numeric" maxlength="6" autocomplete="new-password" required></div>
+        <div><label for="p-nuevo">Contraseña nueva</label><input type="password" id="p-nuevo" maxlength="40" autocomplete="new-password" required></div>
+        <div><label for="p-nuevo2">Repetir contraseña nueva</label><input type="password" id="p-nuevo2" maxlength="40" autocomplete="new-password" required></div>
       </div>
       <p class="err" id="err-pin" role="alert"></p>
-      <button class="btn primary" type="submit">Cambiar PIN</button>
+      <button class="btn primary" type="submit">Cambiar contraseña</button>
     </form>
     <button class="btn" data-action="logout" type="button">🚪 Cerrar sesión</button>
   </section>
@@ -431,7 +421,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     </div>
     <div class="panel">
       <span class="lbl" style="margin:0">Respaldo y otros celulares</span>
-      <p class="hint">La configuración incluye perfiles (con los PIN cifrados), moradores y el nombre del edificio. Sirve para copiar todo a otro celular o como respaldo. Guardala en un lugar seguro.</p>
+      <p class="hint">La configuración incluye perfiles (con las contraseñas cifradas), moradores y el nombre del edificio. Sirve para copiar todo a otro celular o como respaldo. Guardala en un lugar seguro.</p>
       <button class="btn" type="button" id="cfg-copy">Copiar configuración</button>
       <div id="cfg-fallback"></div>
       <div>
@@ -458,13 +448,13 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
   document.body.setAttribute('data-auth','0');
 
   /* ---------- Almacenamiento local (IndexedDB) ---------- */
-  var db=null, items=[], residents=[], users=[], session=null, lastPkg=null;
+  var db=null, items=[], residents=[], servs=[], users=[], session=null, lastPkg=null;
   function openDB(){
     return new Promise(function(res){
       try{
-        var r=indexedDB.open('paqueteria',3);
+        var r=indexedDB.open('paqueteria',4);
         r.onupgradeneeded=function(){
-          ['paquetes','moradores','usuarios'].forEach(function(n){
+          ['paquetes','moradores','usuarios','servicios'].forEach(function(n){
             if(!r.result.objectStoreNames.contains(n))r.result.createObjectStore(n,{keyPath:'id'});
           });
         };
@@ -501,11 +491,24 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
   function uid(p){return (p||'M')+Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
   function q(v){return '"'+String(v==null?'':v).replace(/"/g,'""')+'"'}
 
-  /* ---------- Perfiles y PIN ---------- */
+  /* ---------- Perfiles y contraseñas ---------- */
   function isAdmin(){return !!session&&session.rol==='admin'}
   function rolName(r){return r==='admin'?'Administrador':'Vigilador'}
   function firstName(n){return String(n||'').trim().split(/\s+/)[0]||''}
-  function validPin(p){return /^\d{4,6}$/.test(p)}
+  function validPass(p){return typeof p==='string'&&p.length>=6&&p.length<=40}
+  function validUser(u){return /^[a-z0-9._-]{3,30}$/.test(u)}
+  function slugUser(n){var t=norm(n).replace(/[^a-z0-9]+/g,'.').replace(/^\.+|\.+$/g,'').slice(0,30); return t.length>=3?t:(t+'.usr').slice(0,30)}
+  function ensureUsuarios(list){
+    var taken={}, changed=[];
+    list.forEach(function(u){if(u.usuario)taken[u.usuario]=1});
+    list.forEach(function(u){
+      if(u.usuario)return;
+      var b=slugUser(u.nombre), c=b, i=2;
+      while(taken[c]){c=b+i; i++}
+      u.usuario=c; taken[c]=1; changed.push(u);
+    });
+    return changed;
+  }
   function rnd(n){
     var a=new Uint8Array(n);
     try{crypto.getRandomValues(a)}catch(e){for(var i=0;i<n;i++)a[i]=Math.floor(Math.random()*256)}
@@ -523,9 +526,11 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     var h=5381; for(var i=0;i<txt.length;i++){h=((h<<5)+h+txt.charCodeAt(i))|0}
     return Promise.resolve('f'+(h>>>0).toString(16));
   }
-  function newUser(nombre,rol,pin){
+  /* Administrador inicial: la contraseña no está en el código, solo su huella cifrada. */
+  var SEED={id:'U-inicial',usuario:'admin',nombre:'Administrador',rol:'admin',salt:'53198dfcf2aa09c7',hash:'e914e3c96995769f1b12a8ec848d3e6474c584b33b222106886f7f1819c1882d'};
+  function newUser(nombre,usuario,rol,pass){
     var salt=rnd(8);
-    return hashPin(pin,salt).then(function(h){return{id:uid('U'),nombre:nombre,rol:rol,activo:true,salt:salt,hash:h}});
+    return hashPin(pass,salt).then(function(h){return{id:uid('U'),nombre:nombre,usuario:usuario,rol:rol,activo:true,salt:salt,hash:h}});
   }
   function byName(a,b){return a.nombre.localeCompare(b.nombre,'es')}
 
@@ -554,10 +559,10 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
   }
 
   /* ---------- Navegación ---------- */
-  var views=['setup','login','home','cargar','listo','paquetes','entregar','moradores','usuarios','cuenta','ajustes'];
+  var views=['login','home','cargar','listo','paquetes','entregar','moradores','usuarios','cuenta','ajustes'];
   function go(v){
-    if(!session&&v!=='login'&&v!=='setup')v=users.length?'login':'setup';
-    if(session&&(v==='login'||v==='setup'))v='home';
+    if(!session&&v!=='login')v='login';
+    if(session&&v==='login')v='home';
     if((v==='usuarios'||v==='ajustes')&&!isAdmin())v='home';
     if(v==='listo'&&!lastPkg)v='home';
     views.forEach(function(x){$('#v-'+x).hidden=(x!==v)});
@@ -599,7 +604,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
   function startSession(u){
     session=u;
     document.body.setAttribute('data-auth','1'); document.body.setAttribute('data-role',u.rol);
-    lsSet('paq_last',u.id);
+    lsSet('paq_lastuser',u.usuario);
     applySettings(); renderMenu(); renderPaquetes(); renderRes();
     go('home');
   }
@@ -609,54 +614,26 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     $('#chips').innerHTML='';
     ['#f-pin','#f-login','#f-cargar','#f-entregar'].forEach(function(s){try{$(s).reset()}catch(e){}});
     photo=''; $('#drop').innerHTML=dropDefault; $('#sugg').innerHTML=''; $('#tel-wrap').hidden=true;
-    closeMenu(); go(users.length?'login':'setup');
+    closeMenu(); go('login');
     if(msg)toast(msg);
   }
 
-  /* primer ingreso */
-  $('#f-setup').addEventListener('submit',function(e){
-    e.preventDefault();
-    var n=$('#s-nombre').value.trim(), p=$('#s-pin').value.trim(), p2=$('#s-pin2').value.trim(), err=$('#err-setup');
-    if(!n){err.textContent='Falta el nombre.';return}
-    if(!validPin(p)){err.textContent='El PIN debe tener entre 4 y 6 números.';return}
-    if(p!==p2){err.textContent='Los dos PIN no coinciden.';return}
-    err.textContent='';
-    newUser(n,'admin',p).then(function(u){users=[u]; return sPut('usuarios',u).then(function(){return u})}).then(function(u){
-      $('#f-setup').reset(); startSession(u); toast('Administrador creado');
-    });
-  });
-
-  /* ingreso */
-  var loginTarget=null, fails=0, lockUntil=0;
-  function renderLogin(){
-    loginTarget=null; $('#f-login').hidden=true; $('#login-list').hidden=false; $('#l-pin').value=''; $('#err-login').textContent='';
-    var last=lsGet('paq_last');
-    var act=users.filter(function(u){return u.activo}).sort(function(a,b){
-      if(a.id===last)return -1; if(b.id===last)return 1; return byName(a,b);
-    });
-    $('#login-list').innerHTML='<span class="lbl" style="margin:0">Perfiles</span>'+(act.length?act.map(function(u){
-      return '<button type="button" class="pick" data-user="'+esc(u.id)+'"><span>'+esc(u.nombre)+'</span><span class="pill '+(u.rol==='admin'?'adm':'vig')+'">'+rolName(u.rol)+'</span></button>';
-    }).join(''):'<div class="empty-state">No hay perfiles activos. Pedile a un administrador que active uno.</div>');
-  }
-  $('#login-list').addEventListener('click',function(e){
-    var b=e.target.closest('[data-user]'); if(!b)return;
-    var u=users.find(function(x){return x.id===b.dataset.user}); if(!u)return;
-    loginTarget=u.id; $('#login-name').textContent=u.nombre;
-    $('#login-list').hidden=true; $('#f-login').hidden=false; $('#err-login').textContent=''; $('#l-pin').value=''; $('#l-pin').focus();
-  });
-  $('#login-back').addEventListener('click',renderLogin);
+  /* ingreso con usuario y contraseña */
+  function renderLogin(){$('#l-user').value=lsGet('paq_lastuser'); $('#l-pass').value=''; $('#err-login').textContent=''}
+  function lockLeft(){var t=parseInt(lsGet('paq_lock'),10)||0; return Math.ceil((t-Date.now())/1000)}
   $('#f-login').addEventListener('submit',function(e){
     e.preventDefault();
-    var u=users.find(function(x){return x.id===loginTarget}), err=$('#err-login'), pin=$('#l-pin').value.trim();
-    if(!u)return;
-    var wait=Math.ceil((lockUntil-Date.now())/1000);
+    var err=$('#err-login'), name=$('#l-user').value.trim().toLowerCase(), pass=$('#l-pass').value;
+    if(!db){err.textContent='Este navegador no permite guardar datos (¿ventana privada?). Abrí la app en una ventana normal.';return}
+    var wait=lockLeft();
     if(wait>0){err.textContent='Demasiados intentos. Esperá '+wait+' segundos.';return}
-    hashPin(pin,u.salt).then(function(h){
-      if(h===u.hash&&u.activo){fails=0; $('#l-pin').value=''; startSession(u)}
+    var u=users.find(function(x){return x.usuario===name})||users.find(function(x){return x.usuario===slugUser(name)});
+    hashPin(pass,u?u.salt:'0000000000000000').then(function(h){
+      if(u&&u.activo&&h===u.hash){lsSet('paq_fails','0'); $('#l-pass').value=''; startSession(u)}
       else{
-        fails++; $('#l-pin').value='';
-        if(fails>=5){fails=0; lockUntil=Date.now()+30000; err.textContent='Demasiados intentos. Esperá 30 segundos.'}
-        else err.textContent='PIN incorrecto.';
+        var n=(parseInt(lsGet('paq_fails'),10)||0)+1; $('#l-pass').value='';
+        if(n>=5){lsSet('paq_fails','0'); lsSet('paq_lock',String(Date.now()+30000)); err.textContent='Demasiados intentos. Esperá 30 segundos.'}
+        else{lsSet('paq_fails',String(n)); err.textContent='Usuario o contraseña incorrectos.'}
       }
     });
   });
@@ -693,7 +670,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
       {g:'moradores',c:'c3',e:'👥',t:'Mis Moradores',s:residents.length?(residents.length+' cargados'):(isAdmin()?'Cargá la lista':'Lista vacía')}
     ];
     if(isAdmin())t.push({g:'usuarios',c:'c5',e:'🛡️',t:'Usuarios',s:users.filter(function(u){return u.activo}).length+' activos'});
-    t.push({g:'cuenta',c:'c4',e:'👤',t:'Mi Cuenta',s:'Perfil y PIN'});
+    t.push({g:'cuenta',c:'c4',e:'👤',t:'Mi Cuenta',s:'Perfil y contraseña'});
     if(isAdmin())t.push({g:'ajustes',c:'c6',e:'⚙️',t:'Ajustes',s:'Edificio y respaldo'});
     $('#tiles').innerHTML=t.map(function(x){
       return '<button class="tile '+x.c+'" data-go="'+x.g+'">'+(x.d?'<span class="dot">'+x.d+'</span>':'')+'<span class="e">'+x.e+'</span><b>'+x.t+'</b><small>'+esc(x.s)+'</small></button>';
@@ -726,11 +703,11 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
   function matches(qq,limit){
     var toks=norm(qq).split(/\s+/).filter(Boolean);
     if(!toks.length)return [];
-    return residents.filter(function(r){var h=norm(r.nombre+' '+r.unidad);return toks.every(function(t){return h.indexOf(t)>=0})}).slice(0,limit);
+    return residents.filter(function(r){var h=norm(r.nombre+' '+r.unidad+' '+(r.servicio||''));return toks.every(function(t){return h.indexOf(t)>=0})}).slice(0,limit);
   }
   $('#dest').addEventListener('input',function(){
     var m=matches($('#dest').value,5);
-    $('#sugg').innerHTML=m.map(function(r){return '<button type="button" data-pick="'+esc(r.id)+'">'+esc(r.nombre)+'<span>'+esc(r.unidad)+'</span></button>'}).join('');
+    $('#sugg').innerHTML=m.map(function(r){return '<button type="button" data-pick="'+esc(r.id)+'">'+esc(r.nombre)+'<span>'+esc(r.unidad)+(r.servicio?' · '+esc(r.servicio):'')+'</span></button>'}).join('');
   });
   $('#sugg').addEventListener('click',function(e){
     var b=e.target.closest('[data-pick]'); if(!b)return;
@@ -901,36 +878,85 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
 
   /* ---------- Moradores ---------- */
   var editing=null, pendingImport=null, replaceArmed=false;
+  function servNames(){return servs.map(function(x){return x.nombre}).sort(function(a,b){return a.localeCompare(b,'es')})}
+  function fillServSelect(sel){
+    var el=$('#m-servicio'), cur=sel!==undefined?sel:el.value, names=servNames();
+    if(cur&&names.indexOf(cur)<0)names.push(cur);
+    el.innerHTML='<option value="">'+(servs.length?'— Elegí un servicio —':'— Primero cargá los servicios —')+'</option>'+names.map(function(n){return '<option value="'+esc(n)+'">'+esc(n)+'</option>'}).join('');
+    el.value=cur||'';
+  }
+  var servDelArmed=null;
+  function renderServ(){
+    fillServSelect();
+    if(!$('#serv-lista'))return;
+    $('#serv-count').textContent='Servicios · '+servs.length;
+    var cnt={}; residents.forEach(function(r){if(r.servicio)cnt[r.servicio]=(cnt[r.servicio]||0)+1});
+    $('#serv-lista').innerHTML=servs.length?servNames().map(function(n){
+      var sv=servs.find(function(x){return x.nombre===n}), c=cnt[n]||0;
+      return '<div class="card"><div class="info"><div class="dest">'+esc(n)+'</div><div class="meta">'+c+(c===1?' morador':' moradores')+'</div></div>'+
+        '<div class="row"><button class="btn small danger" data-sdel="'+esc(sv.id)+'">'+(servDelArmed===sv.id?'Tocá de nuevo para eliminar':'Eliminar')+'</button></div></div>';
+    }).join(''):'<div class="empty-state">Todavía no hay servicios cargados.</div>';
+  }
+  $('#f-serv').addEventListener('submit',function(e){
+    e.preventDefault(); if(!isAdmin())return;
+    var n=$('#s-nombre').value.trim().replace(/\s+/g,' '), err=$('#err-serv');
+    if(!n)return;
+    if(servs.some(function(x){return norm(x.nombre)===norm(n)})){err.textContent='Ese servicio ya está cargado.';return}
+    err.textContent='';
+    var o={id:uid(),nombre:n}; servs.push(o);
+    sPut('servicios',o).then(function(){$('#s-nombre').value=''; renderServ(); toast('Servicio agregado')});
+  });
+  $('#serv-lista').addEventListener('click',function(e){
+    if(!isAdmin())return;
+    var b=e.target.closest('[data-sdel]'); if(!b)return;
+    var sv=servs.find(function(x){return x.id===b.dataset.sdel}); if(!sv)return;
+    var used=residents.filter(function(r){return r.servicio===sv.nombre}).length;
+    if(used){toast('No se puede eliminar: tiene '+used+(used===1?' morador':' moradores')); return}
+    if(servDelArmed!==sv.id){servDelArmed=sv.id; renderServ(); return}
+    servDelArmed=null; servs=servs.filter(function(x){return x.id!==sv.id});
+    sDel('servicios',sv.id).then(function(){renderServ(); toast('Servicio eliminado')});
+  });
+  function ensureServs(names){
+    var add=[];
+    names.forEach(function(n){
+      n=(n||'').trim(); if(!n)return;
+      if(servs.some(function(x){return norm(x.nombre)===norm(n)}))return;
+      var o={id:uid(),nombre:n}; servs.push(o); add.push(o);
+    });
+    return add.length?sPutMany('servicios',add):Promise.resolve();
+  }
   function sortedRes(){return residents.slice().sort(byName)}
   function renderRes(){
     var qq=norm($('#mor-buscar').value.trim()), toks=qq.split(/\s+/).filter(Boolean);
-    var all=sortedRes().filter(function(r){var h=norm(r.nombre+' '+r.unidad);return toks.every(function(t){return h.indexOf(t)>=0})});
+    var all=sortedRes().filter(function(r){var h=norm(r.nombre+' '+r.unidad+' '+(r.servicio||''));return toks.every(function(t){return h.indexOf(t)>=0})});
     var shown=all.slice(0,80), adm=isAdmin();
     var miss=residents.filter(function(r){return !validPhone(r.telefono)}).length;
     $('#mor-count').textContent='Lista · '+residents.length+(residents.length===1?' morador':' moradores')+(miss?' · '+miss+' sin teléfono':'');
     $('#mor-lista').innerHTML=shown.length?shown.map(function(r){
-      return '<div class="card"><div class="info"><div class="dest">'+esc(r.nombre)+'</div><div class="unit">'+esc(r.unidad)+(validPhone(r.telefono)?' · '+esc(r.telefono):' <span class="pill wait">Sin teléfono</span>')+'</div></div>'+
+      return '<div class="card"><div class="info"><div class="dest">'+esc(r.nombre)+'</div><div class="unit">'+(r.servicio?'<span class="pill adm">'+esc(r.servicio)+'</span> ':'')+esc(r.unidad)+(validPhone(r.telefono)?' · '+esc(r.telefono):' <span class="pill wait">Sin teléfono</span>')+'</div></div>'+
         (adm?'<div class="row"><button class="btn small" data-edit="'+esc(r.id)+'">Editar</button><button class="btn small danger" data-del="'+esc(r.id)+'">Eliminar</button></div>':'')+'</div>';
     }).join('')+(all.length>shown.length?'<p class="hint">Mostrando '+shown.length+' de '+all.length+'. Usá el buscador para ver el resto.</p>':''):
       (residents.length?'<div class="empty-state">Ningún morador coincide con la búsqueda.</div>':
       '<div class="empty-state"><strong>La lista está vacía</strong>'+(adm?'Agregá moradores de a uno o cargá la lista completa desde un archivo.':'Un administrador todavía no cargó la lista de moradores.')+'</div>');
+    renderServ();
     renderHome();
   }
   $('#mor-buscar').addEventListener('input',renderRes);
   function resetMorForm(){
-    editing=null; $('#f-mor').reset(); $('#mor-form-title').textContent='Agregar morador'; $('#mor-cancel').hidden=true; $('#err-mor').textContent='';
+    editing=null; $('#f-mor').reset(); fillServSelect(''); $('#mor-form-title').textContent='Agregar morador'; $('#mor-cancel').hidden=true; $('#err-mor').textContent='';
   }
   $('#mor-cancel').addEventListener('click',resetMorForm);
   $('#f-mor').addEventListener('submit',function(e){
     e.preventDefault(); if(!isAdmin())return;
-    var n=$('#m-nombre').value.trim(), u=$('#m-unidad').value.trim(), t=$('#m-tel').value.trim();
+    var n=$('#m-nombre').value.trim(), u=$('#m-unidad').value.trim(), t=$('#m-tel').value.trim(), sv=$('#m-servicio').value;
+    if(servs.length&&!sv){$('#err-mor').textContent='Elegí el servicio al que pertenece.';return}
     if(!n||!u||!t){$('#err-mor').textContent='Completá nombre, unidad y el teléfono del propietario.';return}
     if(!validPhone(t)){$('#err-mor').textContent='Ingresá un teléfono válido con característica, por ejemplo 11 5555 1111.';return}
-    var dup=residents.some(function(r){return r.id!==editing&&norm(r.nombre)===norm(n)&&norm(r.unidad)===norm(u)});
+    var dup=residents.some(function(r){return r.id!==editing&&norm(r.nombre)===norm(n)&&norm(r.unidad)===norm(u)&&norm(r.servicio||'')===norm(sv)});
     if(dup){$('#err-mor').textContent='Ese morador ya está en la lista.';return}
     var r;
-    if(editing){r=residents.find(function(x){return x.id===editing}); r.nombre=n; r.unidad=u; r.telefono=t}
-    else{r={id:uid(),nombre:n,unidad:u,telefono:t}; residents.push(r)}
+    if(editing){r=residents.find(function(x){return x.id===editing}); r.nombre=n; r.unidad=u; r.telefono=t; r.servicio=sv}
+    else{r={id:uid(),nombre:n,unidad:u,telefono:t,servicio:sv}; residents.push(r)}
     sPut('moradores',r).then(function(){var was=!!editing; resetMorForm(); renderRes(); toast(was?'Morador actualizado':'Morador agregado')});
   });
   var delArmed=null;
@@ -939,7 +965,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     var ed=e.target.closest('[data-edit]'), dl=e.target.closest('[data-del]');
     if(ed){
       var r=residents.find(function(x){return x.id===ed.dataset.edit}); if(!r)return;
-      editing=r.id; $('#m-nombre').value=r.nombre; $('#m-unidad').value=r.unidad; $('#m-tel').value=r.telefono||'';
+      editing=r.id; $('#m-nombre').value=r.nombre; $('#m-unidad').value=r.unidad; $('#m-tel').value=r.telefono||''; fillServSelect(r.servicio||'');
       $('#mor-form-title').textContent='Editar morador'; $('#mor-cancel').hidden=false; $('#f-mor').scrollIntoView({behavior:'smooth',block:'center'});
     }
     if(dl){
@@ -955,7 +981,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
   });
   $('#mor-copy').addEventListener('click',function(){
     if(!isAdmin())return;
-    var csv=['nombre,unidad,telefono'].concat(sortedRes().map(function(r){return [r.nombre,r.unidad,r.telefono].map(q).join(',')})).join('\n');
+    var csv=['nombre,unidad,telefono,servicio'].concat(sortedRes().map(function(r){return [r.nombre,r.unidad,r.telefono,r.servicio||''].map(q).join(',')})).join('\n');
     copyText(csv,'Lista copiada',$('#mor-lista'));
   });
 
@@ -980,14 +1006,14 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
   function rowsToResidents(rows){
     rows=rows.map(function(r){return r.map(function(c){return String(c==null?'':c).trim()})}).filter(function(r){return r.some(Boolean)});
     if(!rows.length)return [];
-    var nameRe=/nombre|apellido|morador|propietario|inquilino/, unitRe=/unidad|depto|departamento|piso|oficina|lote|\buf\b/, telRe=/tel|cel|whats/;
-    var head=rows[0].map(norm), hasHead=head.some(function(c){return nameRe.test(c)||unitRe.test(c)||telRe.test(c)});
-    var nameCols=[0], unitCol=1, telCol=2;
+    var nameRe=/nombre|apellido|morador|propietario|inquilino/, svRe=/servicio|puesto|cliente|objetivo|edificio|consorcio/, unitRe=/unidad|depto|departamento|piso|oficina|lote|\buf\b/, telRe=/tel|cel|whats/;
+    var head=rows[0].map(norm), hasHead=head.some(function(c){return svRe.test(c)||nameRe.test(c)||unitRe.test(c)||telRe.test(c)});
+    var nameCols=[0], unitCol=1, telCol=2, svCol=-1;
     if(hasHead){
       rows=rows.slice(1);
-      nameCols=[]; unitCol=-1; telCol=-1;
+      nameCols=[]; unitCol=-1; telCol=-1; svCol=-1;
       head.forEach(function(c,i){
-        if(telRe.test(c)){if(telCol<0)telCol=i} else if(unitRe.test(c)){if(unitCol<0)unitCol=i} else if(nameRe.test(c))nameCols.push(i);
+        if(telRe.test(c)){if(telCol<0)telCol=i} else if(svRe.test(c)){if(svCol<0)svCol=i} else if(unitRe.test(c)){if(unitCol<0)unitCol=i} else if(nameRe.test(c))nameCols.push(i);
       });
       if(!nameCols.length)nameCols=[0];
     }
@@ -995,9 +1021,9 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     rows.forEach(function(r){
       var nombre=nameCols.map(function(i){return r[i]||''}).filter(Boolean).join(' ').trim();
       if(!nombre)return;
-      var unidad=unitCol>=0?(r[unitCol]||''):'', tel=telCol>=0?(r[telCol]||''):'';
-      var k=norm(nombre)+'|'+norm(unidad); if(seen[k])return; seen[k]=1;
-      out.push({nombre:nombre,unidad:unidad,telefono:tel});
+      var unidad=unitCol>=0?(r[unitCol]||''):'', tel=telCol>=0?(r[telCol]||''):'', sv=svCol>=0?(r[svCol]||''):'';
+      var k=norm(nombre)+'|'+norm(unidad)+'|'+norm(sv); if(seen[k])return; seen[k]=1;
+      out.push({nombre:nombre,unidad:unidad,telefono:tel,servicio:sv});
     });
     return out;
   }
@@ -1037,17 +1063,17 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
   $('#mor-preview').addEventListener('click',function(e){
     if(!isAdmin()||!pendingImport||!pendingImport.length)return;
     if(e.target.id==='imp-add'){
-      var have={}; residents.forEach(function(r){have[norm(r.nombre)+'|'+norm(r.unidad)]=1});
-      var add=pendingImport.filter(function(r){return !have[norm(r.nombre)+'|'+norm(r.unidad)]}).map(function(r){return{id:uid(),nombre:r.nombre,unidad:r.unidad,telefono:r.telefono}});
+      var have={}; residents.forEach(function(r){have[norm(r.nombre)+'|'+norm(r.unidad)+'|'+norm(r.servicio||'')]=1});
+      var add=pendingImport.filter(function(r){return !have[norm(r.nombre)+'|'+norm(r.unidad)+'|'+norm(r.servicio||'')]}).map(function(r){return{id:uid(),nombre:r.nombre,unidad:r.unidad,telefono:r.telefono,servicio:r.servicio||''}});
       var skipped=pendingImport.length-add.length;
       residents=residents.concat(add);
-      sPutMany('moradores',add).then(function(){finishImport('Se agregaron '+add.length+(skipped?' · '+skipped+' ya estaban':''))});
+      ensureServs(add.map(function(r){return r.servicio})).then(function(){return sPutMany('moradores',add)}).then(function(){finishImport('Se agregaron '+add.length+(skipped?' · '+skipped+' ya estaban':''))});
     }
     if(e.target.id==='imp-rep'){
       if(!replaceArmed){replaceArmed=true; e.target.textContent='Tocá de nuevo: se borran los '+residents.length+' actuales'; return}
-      var all=pendingImport.map(function(r){return{id:uid(),nombre:r.nombre,unidad:r.unidad,telefono:r.telefono}});
+      var all=pendingImport.map(function(r){return{id:uid(),nombre:r.nombre,unidad:r.unidad,telefono:r.telefono,servicio:r.servicio||''}});
       residents=all;
-      sClear('moradores').then(function(){return sPutMany('moradores',all)}).then(function(){finishImport('Lista reemplazada: '+all.length+' moradores')});
+      sClear('moradores').then(function(){return ensureServs(all.map(function(r){return r.servicio}))}).then(function(){return sPutMany('moradores',all)}).then(function(){finishImport('Lista reemplazada: '+all.length+' moradores')});
     }
   });
   function finishImport(msg){
@@ -1056,7 +1082,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
   }
 
   /* ---------- Usuarios (administrador) ---------- */
-  var editingUser=null, toggleArmed=null;
+  var editingUser=null, toggleArmed=null, delUserArmed=null;
   function lastAdminGuard(u,newRol,newActivo){
     var others=users.filter(function(x){return x.id!==u.id&&x.rol==='admin'&&x.activo}).length;
     return !(newRol==='admin'&&newActivo)&&others===0;
@@ -1067,47 +1093,59 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     $('#user-lista').innerHTML=list.map(function(u){
       var self=session&&u.id===session.id;
       return '<div class="card"><div class="info"><div class="dest">'+esc(u.nombre)+(self?' (vos)':'')+'</div>'+
+        '<div class="meta">usuario: '+esc(u.usuario||'')+'</div>'+
         '<div class="unit"><span class="pill '+(u.rol==='admin'?'adm':'vig')+'">'+rolName(u.rol)+'</span>'+(u.activo?'':' <span class="pill off">Inactivo</span>')+'</div></div>'+
         '<div class="row"><button class="btn small" data-uedit="'+esc(u.id)+'">Editar</button>'+
-        (self?'':'<button class="btn small" data-utoggle="'+esc(u.id)+'">'+(u.activo?'Desactivar':'Activar')+'</button>')+'</div></div>';
+        (self?'':'<button class="btn small" data-utoggle="'+esc(u.id)+'">'+(u.activo?'Desactivar':'Activar')+'</button><button class="btn small danger" data-udel="'+esc(u.id)+'">'+(delUserArmed===u.id?'Tocá de nuevo para eliminar':'Eliminar')+'</button>')+'</div></div>';
     }).join('');
   }
   function resetUserForm(){
     editingUser=null; $('#f-user').reset(); $('#user-form-title').textContent='Nuevo perfil'; $('#user-cancel').hidden=true;
-    $('#u-pin-lbl').textContent='PIN (4 a 6 números)'; $('#err-user').textContent='';
+    $('#u-pin-lbl').textContent='Contraseña (mínimo 6 caracteres)'; $('#err-user').textContent='';
   }
   $('#user-cancel').addEventListener('click',resetUserForm);
   $('#f-user').addEventListener('submit',function(e){
     e.preventDefault(); if(!isAdmin())return;
-    var n=$('#u-nombre').value.trim(), rol=$('#u-rol').value, pin=$('#u-pin').value.trim(), err=$('#err-user');
+    var n=$('#u-nombre').value.trim(), us=$('#u-usuario').value.trim().toLowerCase(), rol=$('#u-rol').value, pass=$('#u-pin').value, err=$('#err-user');
     if(!n){err.textContent='Falta el nombre.';return}
+    if(!validUser(us)){err.textContent='El usuario va en minúsculas y sin espacios: de 3 a 30 letras, números, punto, guion o guion bajo.';return}
     if(rol!=='admin'&&rol!=='vigilador')return;
-    if(users.some(function(x){return x.id!==editingUser&&norm(x.nombre)===norm(n)})){err.textContent='Ya hay un perfil con ese nombre.';return}
+    if(users.some(function(x){return x.id!==editingUser&&x.usuario===us})){err.textContent='Ese usuario ya existe. Elegí otro.';return}
     if(editingUser){
       var u=users.find(function(x){return x.id===editingUser}); if(!u)return;
       if(lastAdminGuard(u,rol,u.activo)){err.textContent='Tiene que quedar al menos un administrador activo.';return}
-      if(pin&&!validPin(pin)){err.textContent='El PIN debe tener entre 4 y 6 números.';return}
+      if(pass&&!validPass(pass)){err.textContent='La contraseña debe tener al menos 6 caracteres.';return}
       err.textContent='';
       var p=Promise.resolve();
-      if(pin){var s=rnd(8); p=hashPin(pin,s).then(function(h){u.salt=s;u.hash=h})}
-      p.then(function(){u.nombre=n; u.rol=rol; return sPut('usuarios',u)}).then(function(){
+      if(pass){var s=rnd(8); p=hashPin(pass,s).then(function(h){u.salt=s;u.hash=h})}
+      p.then(function(){u.nombre=n; u.usuario=us; u.rol=rol; return sPut('usuarios',u)}).then(function(){
         if(session&&u.id===session.id){document.body.setAttribute('data-role',session.rol); renderMenu(); applySettings()}
         resetUserForm(); renderUsers(); renderHome(); toast('Perfil actualizado');
         if(!isAdmin())go('home');
       });
     }else{
-      if(!validPin(pin)){err.textContent='El PIN debe tener entre 4 y 6 números.';return}
+      if(!validPass(pass)){err.textContent='La contraseña debe tener al menos 6 caracteres.';return}
       err.textContent='';
-      newUser(n,rol,pin).then(function(u){users.push(u); return sPut('usuarios',u)}).then(function(){resetUserForm(); renderUsers(); renderHome(); toast('Perfil creado')});
+      newUser(n,us,rol,pass).then(function(u){users.push(u); return sPut('usuarios',u)}).then(function(){resetUserForm(); renderUsers(); renderHome(); toast('Perfil creado')});
     }
   });
   $('#user-lista').addEventListener('click',function(e){
     if(!isAdmin())return;
-    var ed=e.target.closest('[data-uedit]'), tg=e.target.closest('[data-utoggle]');
+    var ed=e.target.closest('[data-uedit]'), tg=e.target.closest('[data-utoggle]'), dl=e.target.closest('[data-udel]');
+    if(dl){
+      var d=users.find(function(x){return x.id===dl.dataset.udel}); if(!d||(session&&d.id===session.id))return;
+      if(lastAdminGuard(d,'vigilador',false)){toast('Tiene que quedar al menos un administrador activo'); return}
+      if(delUserArmed!==d.id){delUserArmed=d.id; renderUsers(); return}
+      delUserArmed=null;
+      if(d.id===SEED.id){try{localStorage.setItem('paq_noseed','1')}catch(_){}}
+      sDel('usuarios',d.id).then(function(){users=users.filter(function(x){return x.id!==d.id}); if(editingUser===d.id)resetUserForm(); renderUsers(); renderHome(); toast('Perfil eliminado')});
+      return;
+    }
+    if(delUserArmed){delUserArmed=null; renderUsers()}
     if(ed){
       var u=users.find(function(x){return x.id===ed.dataset.uedit}); if(!u)return;
-      editingUser=u.id; $('#u-nombre').value=u.nombre; $('#u-rol').value=u.rol; $('#u-pin').value='';
-      $('#user-form-title').textContent='Editar perfil'; $('#user-cancel').hidden=false; $('#u-pin-lbl').textContent='PIN nuevo (opcional)';
+      editingUser=u.id; $('#u-nombre').value=u.nombre; $('#u-usuario').value=u.usuario||''; $('#u-rol').value=u.rol; $('#u-pin').value='';
+      $('#user-form-title').textContent='Editar perfil'; $('#user-cancel').hidden=false; $('#u-pin-lbl').textContent='Contraseña nueva (opcional)';
       $('#f-user').scrollIntoView({behavior:'smooth',block:'center'});
     }
     if(tg){
@@ -1121,19 +1159,20 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
   /* ---------- Mi cuenta ---------- */
   function renderCuenta(){
     if(!session)return;
-    $('#cuenta-info').innerHTML='<div class="kv"><b style="font-weight:700">'+esc(session.nombre)+'</b><span class="pill '+(session.rol==='admin'?'adm':'vig')+'">'+rolName(session.rol)+'</span></div>';
+    $('#cuenta-info').innerHTML='<div class="kv"><b style="font-weight:700">'+esc(session.nombre)+'</b><span class="pill '+(session.rol==='admin'?'adm':'vig')+'">'+rolName(session.rol)+'</span></div>'+
+      '<p class="hint" style="margin-top:8px">Usuario: <b>'+esc(session.usuario||'')+'</b></p>';
     $('#err-pin').textContent='';
   }
   $('#f-pin').addEventListener('submit',function(e){
     e.preventDefault(); if(!session)return;
-    var a=$('#p-actual').value.trim(), n=$('#p-nuevo').value.trim(), n2=$('#p-nuevo2').value.trim(), err=$('#err-pin');
-    if(!validPin(n)){err.textContent='El PIN nuevo debe tener entre 4 y 6 números.';return}
-    if(n!==n2){err.textContent='Los dos PIN nuevos no coinciden.';return}
+    var a=$('#p-actual').value, n=$('#p-nuevo').value, n2=$('#p-nuevo2').value, err=$('#err-pin');
+    if(!validPass(n)){err.textContent='La contraseña nueva debe tener al menos 6 caracteres.';return}
+    if(n!==n2){err.textContent='Las dos contraseñas nuevas no coinciden.';return}
     hashPin(a,session.salt).then(function(h){
-      if(h!==session.hash){err.textContent='El PIN actual no es correcto.';return}
+      if(h!==session.hash){err.textContent='La contraseña actual no es correcta.';return}
       var s=rnd(8);
       return hashPin(n,s).then(function(nh){session.salt=s; session.hash=nh; return sPut('usuarios',session)}).then(function(){
-        $('#f-pin').reset(); err.textContent=''; toast('PIN cambiado');
+        $('#f-pin').reset(); err.textContent=''; toast('Contraseña cambiada');
       });
     });
   });
@@ -1153,28 +1192,31 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     if(!o||o.app!=='secutec-paqueteria'||!Array.isArray(o.usuarios))return null;
     var us=o.usuarios.map(function(u){
       if(!u||typeof u!=='object')return null;
-      var id=str(u.id,40), nombre=str(u.nombre,80).trim(), salt=str(u.salt,64), hash=str(u.hash,80);
+      var id=str(u.id,40), nombre=str(u.nombre,80).trim(), salt=str(u.salt,64), hash=str(u.hash,80), uname=str(u.usuario,30).toLowerCase(); if(!validUser(uname))uname='';
       if(!id||!nombre||!salt||!hash||(u.rol!=='admin'&&u.rol!=='vigilador'))return null;
-      return{id:id,nombre:nombre,rol:u.rol,activo:u.activo!==false,salt:salt,hash:hash};
+      return{id:id,nombre:nombre,usuario:uname,rol:u.rol,activo:u.activo!==false,salt:salt,hash:hash};
     }).filter(Boolean);
+    ensureUsuarios(us);
     if(!us.some(function(u){return u.rol==='admin'&&u.activo}))return null;
     var ms=(Array.isArray(o.moradores)?o.moradores:[]).map(function(m){
       if(!m||typeof m!=='object')return null;
       var nombre=str(m.nombre,80).trim(); if(!nombre)return null;
-      return{id:str(m.id,40)||uid(),nombre:nombre,unidad:str(m.unidad,60),telefono:str(m.telefono,40)};
+      return{id:str(m.id,40)||uid(),nombre:nombre,unidad:str(m.unidad,60),telefono:str(m.telefono,40),servicio:str(m.servicio,80)};
     }).filter(Boolean);
     var a=o.ajustes&&typeof o.ajustes==='object'?o.ajustes:{};
-    return{usuarios:us,moradores:ms,ajustes:{edif:str(a.edif,80)}};
+    var sn=[]; (Array.isArray(o.servicios)?o.servicios:[]).concat(ms.map(function(m){return m.servicio})).forEach(function(n){n=typeof n==='string'?n.trim().slice(0,80):''; if(n&&sn.indexOf(n)<0)sn.push(n)});
+    return{usuarios:us,moradores:ms,servicios:sn,ajustes:{edif:str(a.edif,80)}};
   }
   function applyConfig(cfg){
-    users=cfg.usuarios; residents=cfg.moradores;
+    users=cfg.usuarios; residents=cfg.moradores; servs=cfg.servicios.map(function(n){return{id:uid(),nombre:n}});
     lsSet('paq_edif',cfg.ajustes.edif);
     return sClear('usuarios').then(function(){return sPutMany('usuarios',users)})
-      .then(function(){return sClear('moradores')}).then(function(){return sPutMany('moradores',residents)});
+      .then(function(){return sClear('moradores')}).then(function(){return sPutMany('moradores',residents)})
+      .then(function(){return sClear('servicios')}).then(function(){return sPutMany('servicios',servs)});
   }
   $('#cfg-copy').addEventListener('click',function(){
     if(!isAdmin())return;
-    var cfg={app:'secutec-paqueteria',v:1,usuarios:users,moradores:residents,ajustes:settings()};
+    var cfg={app:'secutec-paqueteria',v:1,usuarios:users,moradores:residents,servicios:servNames(),ajustes:settings()};
     copyText(JSON.stringify(cfg),'Configuración copiada',$('#cfg-fallback'));
   });
   var cfgArmed=false;
@@ -1186,24 +1228,22 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     cfgArmed=false; this.textContent='Importar y reemplazar'; err.textContent=''; $('#cfg-text').value='';
     applyConfig(cfg).then(function(){logout('Configuración importada. Ingresá de nuevo.')});
   });
-  $('#s-import').addEventListener('click',function(){
-    var cfg=parseConfig($('#s-cfg').value.trim()), err=$('#err-s-cfg');
-    if(!cfg){err.textContent='No se reconoce esa configuración. Copiala de nuevo desde Ajustes del otro celular.';return}
-    err.textContent='';
-    applyConfig(cfg).then(function(){$('#s-cfg').value=''; go('login'); toast('Configuración importada. Elegí tu perfil.')});
-  });
-
   /* ---------- Inicio de la app ---------- */
   openDB().then(function(d){
     db=d;
-    if(!d){
-      go('setup'); $('#err-setup').textContent='Este navegador no permite guardar datos (¿ventana privada?). Abrí la app en una ventana normal.';
-      return;
-    }
-    return Promise.all([sAll('paquetes'),sAll('moradores'),sAll('usuarios')]).then(function(r){
-      items=r[0]; residents=r[1]; users=r[2];
-      go(users.length?'login':'setup');
-    });
+    if(!d){go('login'); $('#err-login').textContent='Este navegador no permite guardar datos (¿ventana privada?). Abrí la app en una ventana normal.'; return}
+    return Promise.all([sAll('paquetes'),sAll('moradores'),sAll('usuarios'),sAll('servicios')]).then(function(r){
+      items=r[0]; residents=r[1]; users=r[2]; servs=r[3]||[];
+      var jobs=ensureUsuarios(users).map(function(u){return sPut('usuarios',u)});
+      var noSeed=false; try{noSeed=localStorage.getItem('paq_noseed')==='1'}catch(_){}
+      if(!noSeed&&!users.some(function(x){return x.id===SEED.id})){
+        var seed=Object.assign({activo:true},SEED);
+        if(users.some(function(x){return x.usuario===seed.usuario}))seed.usuario='admin.inicial';
+        users.push(seed); jobs.push(sPut('usuarios',seed));
+      }
+      jobs.push(ensureServs(residents.map(function(x){return x.servicio})));
+      return Promise.all(jobs);
+    }).then(function(){renderServ(); go('login')});
   });
 })();
 </script>
