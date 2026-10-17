@@ -21,6 +21,9 @@ img{max-width:100%}
 <body>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Roboto+Mono:wght@400;500&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <style>
 /* Layout: cabecera azul con menú y logo, tarjeta de bienvenida y mosaicos de acceso según el perfil. */
 :root{
@@ -216,9 +219,8 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     <form class="panel" id="f-login" autocomplete="on">
       <div><label for="l-user">Correo electrónico</label><input type="text" inputmode="email" id="l-user" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="nombre@correo.com" required></div>
       <div><label for="l-pass">Contraseña</label><input type="password" id="l-pass" autocomplete="current-password" maxlength="40" required></div>
-      <p class="hint">Si tu perfil es anterior y todavía no tiene correo, podés entrar con tu nombre y apellido. Después pedile a un administrador que cargue tu correo.</p>
       <p class="err" id="err-login" role="alert"></p>
-      <button class="btn primary" type="submit">Ingresar</button>
+      <button class="btn primary" type="submit" id="login-go">Ingresar</button>
       <button class="btn" type="button" id="forgot-btn" style="margin-top:10px">¿Olvidaste tu contraseña?</button>
     </form>
   </section>
@@ -417,11 +419,12 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
           <label for="u-rol">Perfil</label>
           <select id="u-rol"><option value="vigilador">Vigilador</option><option value="admin">Administrador</option></select>
         </div>
-        <div><label for="u-pin" id="u-pin-lbl">Contraseña (mínimo 6 caracteres)</label><input type="password" id="u-pin" maxlength="40" autocomplete="new-password"></div>
+        <div id="u-pin-wrap"><label for="u-pin" id="u-pin-lbl">Contraseña (mínimo 6 caracteres)</label><input type="password" id="u-pin" maxlength="40" autocomplete="new-password"></div>
       </div>
       <p class="hint">El correo se usa para ingresar. Los vigiladores cargan y entregan paquetes. Los administradores además manejan moradores, servicios, usuarios y ajustes.</p>
       <p class="err" id="err-user" role="alert"></p>
-      <button class="btn primary" type="submit">Guardar perfil</button>
+      <button class="btn" type="button" id="user-reset" hidden>Enviar correo para cambiar la contraseña</button>
+      <button class="btn primary" type="submit" id="user-save">Guardar perfil</button>
     </form>
     <div class="panel">
       <span class="lbl" style="margin:0" id="user-count">Perfiles</span>
@@ -459,21 +462,9 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     </form>
     <div class="panel">
       <span class="lbl" style="margin:0">Planilla de paquetes</span>
-      <p class="hint">Copia todos los registros de este celular en formato CSV para pegar en Excel o Google Sheets.</p>
+      <p class="hint">Copia todos los registros en formato CSV para pegar en Excel o Google Sheets.</p>
       <button class="btn" type="button" id="copiar">Copiar planilla</button>
       <div id="csv-fallback"></div>
-    </div>
-    <div class="panel">
-      <span class="lbl" style="margin:0">Respaldo y otros celulares</span>
-      <p class="hint">La configuración incluye perfiles (con las contraseñas cifradas), moradores y el nombre del edificio. Sirve para copiar todo a otro celular o como respaldo. Guardala en un lugar seguro.</p>
-      <button class="btn" type="button" id="cfg-copy">Copiar configuración</button>
-      <div id="cfg-fallback"></div>
-      <div>
-        <label for="cfg-text">Pegar una configuración</label>
-        <textarea id="cfg-text" placeholder="Pegá acá la configuración de otro celular" aria-label="Configuración a importar"></textarea>
-      </div>
-      <p class="err" id="err-cfg" role="alert"></p>
-      <button class="btn danger" type="button" id="cfg-import">Importar y reemplazar</button>
     </div>
   </section>
 
@@ -516,38 +507,91 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
   });
   document.body.setAttribute('data-auth','0');
 
-  /* ---------- Almacenamiento local (IndexedDB) ---------- */
-  var db=null, items=[], residents=[], servs=[], users=[], session=null, lastPkg=null;
-  function openDB(){
-    return new Promise(function(res){
-      try{
-        var r=indexedDB.open('paqueteria',4);
-        r.onupgradeneeded=function(){
-          ['paquetes','moradores','usuarios','servicios'].forEach(function(n){
-            if(!r.result.objectStoreNames.contains(n))r.result.createObjectStore(n,{keyPath:'id'});
-          });
-        };
-        r.onsuccess=function(){res(r.result)};
-        r.onerror=function(){res(null)};
-        r.onblocked=function(){res(null)};
-      }catch(e){res(null)}
-    });
+  /* ---------- Datos compartidos en la nube (Firebase) ---------- */
+  var FB_CONFIG={
+    apiKey:'AIzaSyCVbZ2a6L2WZGVjlTB6KTL-OsVchlbVoZA',
+    authDomain:'secuapp-2b5a3.firebaseapp.com',
+    projectId:'secuapp-2b5a3',
+    storageBucket:'secuapp-2b5a3.firebasestorage.app',
+    messagingSenderId:'691919710359',
+    appId:'1:691919710359:web:3ae07576652ddc831a61d2'
+  };
+  var db=null, auth=null, booted=false, loginMsg='', items=[], residents=[], servs=[], users=[], session=null, lastPkg=null, unsubs=[];
+  function initFirebase(){
+    try{
+      if(!window.firebase||!firebase.initializeApp)return false;
+      firebase.initializeApp(FB_CONFIG);
+      auth=firebase.auth(); auth.languageCode='es';
+      db=firebase.firestore();
+      try{var pr=db.enablePersistence({synchronizeTabs:true}); if(pr&&pr.catch)pr.catch(function(){})}catch(e){}
+      return true;
+    }catch(e){return false}
   }
-  function run(n,mode,work){
-    return new Promise(function(res){
-      if(!db){res(null);return}
-      try{
-        var tx=db.transaction(n,mode), out=work(tx.objectStore(n));
-        tx.oncomplete=function(){res(out&&out.result!==undefined?out.result:true)};
-        tx.onerror=tx.onabort=function(){res(null)};
-      }catch(e){res(null)}
-    });
+  function saveFail(e){
+    var c=e&&e.code;
+    toast(c==='permission-denied'?'No tenés permiso para hacer ese cambio.':'No se pudo guardar. Revisá la conexión.');
   }
-  function sAll(n){return run(n,'readonly',function(s){return s.getAll()}).then(function(r){return Array.isArray(r)?r:[]})}
-  function sPut(n,it){return run(n,'readwrite',function(s){return s.put(it)})}
-  function sDel(n,id){return run(n,'readwrite',function(s){return s.delete(id)})}
-  function sClear(n){return run(n,'readwrite',function(s){return s.clear()})}
-  function sPutMany(n,arr){return run(n,'readwrite',function(s){arr.forEach(function(x){s.put(x)});return {result:true}})}
+  /* Las escrituras se anotan al instante y se sincronizan solas cuando hay conexión. */
+  function sPut(n,it){try{db.collection(n).doc(it.id).set(it).catch(saveFail)}catch(e){saveFail(e)} return Promise.resolve(true)}
+  function sDel(n,id){try{db.collection(n).doc(id).delete().catch(saveFail)}catch(e){saveFail(e)} return Promise.resolve(true)}
+  function sPutMany(n,arr){
+    try{
+      for(var i=0;i<arr.length;i+=400){
+        var b=db.batch(); arr.slice(i,i+400).forEach(function(x){b.set(db.collection(n).doc(x.id),x)}); b.commit().catch(saveFail);
+      }
+    }catch(e){saveFail(e)}
+    return Promise.resolve(true);
+  }
+  function sClear(n){
+    return db.collection(n).get().then(function(snap){
+      var docs=[]; snap.forEach(function(d){docs.push(d.ref)});
+      for(var i=0;i<docs.length;i+=400){var b=db.batch(); docs.slice(i,i+400).forEach(function(r){b.delete(r)}); b.commit().catch(saveFail)}
+      return true;
+    }).catch(function(e){saveFail(e); return false});
+  }
+  var renderT=null;
+  function scheduleRender(){
+    clearTimeout(renderT);
+    renderT=setTimeout(function(){
+      if(!session)return;
+      renderPaquetes(); renderRes(); renderServ();
+      if(!$('#v-usuarios').hidden)renderUsers();
+    },60);
+  }
+  function listen(name,assign){
+    unsubs.push(db.collection(name).onSnapshot(function(snap){
+      var arr=[]; snap.forEach(function(d){var o=d.data(); o.id=d.id; arr.push(o)});
+      assign(arr); scheduleRender();
+    },function(e){ if(session)toast('No se pudieron leer los datos de '+name+'.') }));
+  }
+  function startListeners(){
+    stopListeners();
+    listen('paquetes',function(a){items=a});
+    listen('moradores',function(a){residents=a});
+    listen('servicios',function(a){servs=a});
+    if(isAdmin())listen('usuarios',function(a){users=a});
+    /* si cambian mi perfil (rol o estado), la app lo refleja al instante */
+    unsubs.push(db.collection('usuarios').doc(session.id).onSnapshot(function(d){
+      if(!session)return;
+      var pr=d.exists?d.data():null;
+      if(!pr||pr.activo===false){logout('Tu acceso fue desactivado.'); return}
+      var rol=pr.rol==='admin'?'admin':'vigilador', was=session.rol;
+      session.nombre=pr.nombre||session.nombre; session.rol=rol;
+      if(rol!==was){
+        document.body.setAttribute('data-role',rol); renderMenu(); startListeners(); go('home');
+      }else{renderMenu(); applySettings()}
+    }));
+  }
+  function stopListeners(){unsubs.forEach(function(f){try{f()}catch(e){}}); unsubs=[]}
+  function authMsg(e){
+    var c=(e&&e.code)||'';
+    if(c==='auth/network-request-failed')return 'Sin conexión. Revisá internet e intentá de nuevo.';
+    if(c==='auth/too-many-requests')return 'Demasiados intentos. Esperá unos minutos o usá "¿Olvidaste tu contraseña?".';
+    if(c==='auth/user-disabled')return 'Esa cuenta está deshabilitada.';
+    if(c==='auth/weak-password')return 'La contraseña debe tener al menos 6 caracteres.';
+    if(c==='auth/invalid-email')return 'Escribí un correo válido, por ejemplo nombre@correo.com.';
+    return 'Correo o contraseña incorrectos.';
+  }
 
   function pad(n){return String(n).padStart(4,'0')}
   function fmt(iso){
@@ -566,42 +610,6 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
   function firstName(n){return String(n||'').trim().split(/\s+/)[0]||''}
   function validPass(p){return typeof p==='string'&&p.length>=6&&p.length<=40}
   function validEmail(u){return u.length<=80&&/^[a-z0-9._%+-]+@[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(u)}
-  function validUser(u){return validEmail(u)||/^[a-z0-9._-]{3,30}$/.test(u)}
-  function slugUser(n){var t=norm(n).replace(/[^a-z0-9]+/g,'.').replace(/^\.+|\.+$/g,'').slice(0,30); return t.length>=3?t:(t+'.usr').slice(0,30)}
-  function ensureUsuarios(list){
-    var taken={}, changed=[];
-    list.forEach(function(u){if(u.usuario)taken[u.usuario]=1});
-    list.forEach(function(u){
-      if(u.usuario)return;
-      var b=slugUser(u.nombre), c=b, i=2;
-      while(taken[c]){c=b+i; i++}
-      u.usuario=c; taken[c]=1; changed.push(u);
-    });
-    return changed;
-  }
-  function rnd(n){
-    var a=new Uint8Array(n);
-    try{crypto.getRandomValues(a)}catch(e){for(var i=0;i<n;i++)a[i]=Math.floor(Math.random()*256)}
-    return Array.prototype.map.call(a,function(b){return ('0'+b.toString(16)).slice(-2)}).join('');
-  }
-  function hashPin(pin,salt){
-    var txt=salt+':'+pin;
-    try{
-      if(window.crypto&&crypto.subtle){
-        return crypto.subtle.digest('SHA-256',new TextEncoder().encode(txt)).then(function(b){
-          return Array.prototype.map.call(new Uint8Array(b),function(x){return ('0'+x.toString(16)).slice(-2)}).join('');
-        });
-      }
-    }catch(e){}
-    var h=5381; for(var i=0;i<txt.length;i++){h=((h<<5)+h+txt.charCodeAt(i))|0}
-    return Promise.resolve('f'+(h>>>0).toString(16));
-  }
-  /* Administrador inicial: la contraseña no está en el código, solo su huella cifrada. */
-  var SEED={id:'U-inicial',usuario:'admin',nombre:'Administrador',rol:'admin',salt:'53198dfcf2aa09c7',hash:'e914e3c96995769f1b12a8ec848d3e6474c584b33b222106886f7f1819c1882d'};
-  function newUser(nombre,usuario,rol,pass){
-    var salt=rnd(8);
-    return hashPin(pass,salt).then(function(h){return{id:uid('U'),nombre:nombre,usuario:usuario,rol:rol,activo:true,salt:salt,hash:h}});
-  }
   function byName(a,b){return a.nombre.localeCompare(b.nombre,'es')}
 
   /* ---------- Teléfonos y avisos ---------- */
@@ -677,36 +685,74 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     session=u;
     document.body.setAttribute('data-auth','1'); document.body.setAttribute('data-role',u.rol);
     lsSet('paq_lastuser',u.usuario);
-    applySettings(); renderMenu(); renderPaquetes(); renderRes();
+    applySettings(); renderMenu();
+    startListeners();
+    renderPaquetes(); renderRes();
     go('home');
   }
   function logout(msg){
-    session=null; current=null; lastPkg=null;
+    stopListeners();
+    session=null; current=null; lastPkg=null; items=[]; residents=[]; servs=[]; users=[];
     document.body.setAttribute('data-auth','0'); document.body.removeAttribute('data-role');
     $('#chips').innerHTML='';
     ['#f-pin','#f-login','#f-cargar','#f-entregar'].forEach(function(s){try{$(s).reset()}catch(e){}});
     photo=''; $('#drop').innerHTML=dropDefault; $('#sugg').innerHTML=''; $('#tel-aviso').readOnly=false; $('#tel-wrap').hidden=true;
-    closeMenu(); go('login');
-    if(msg)toast(msg);
+    closeMenu();
+    loginMsg=msg||'';
+    try{if(auth&&auth.currentUser)auth.signOut()}catch(e){}
+    go('login');
+  }
+  function deny(msg){
+    loginMsg=msg;
+    try{auth.signOut()}catch(e){}
+    go('login');
+  }
+  function onUser(user){
+    var email=(user.email||'').toLowerCase();
+    db.collection('usuarios').doc(email).get().then(function(d){
+      var pr=d.exists?d.data():null;
+      if(!pr){deny('Tu correo todavía no tiene acceso a la app. Pedile a un administrador que te dé de alta.'); return}
+      if(pr.activo===false){deny('Tu perfil está desactivado. Consultá con un administrador.'); return}
+      startSession({id:email,usuario:email,nombre:pr.nombre||email,rol:pr.rol==='admin'?'admin':'vigilador',activo:true});
+    }).catch(function(e){
+      deny((e&&e.code==='permission-denied')?'Tu correo todavía no tiene acceso a la app. Pedile a un administrador que te dé de alta.':'No se pudo verificar tu perfil. Revisá la conexión e intentá de nuevo.');
+    });
+  }
+  function bootAuth(){
+    if(!initFirebase()){
+      booted=true; loginMsg='No se pudo cargar Firebase. Revisá tu conexión a internet y recargá la app.'; go('login'); return;
+    }
+    var first=true;
+    auth.onAuthStateChanged(function(user){
+      if(user){
+        if(session&&session.usuario===(user.email||'').toLowerCase())return;
+        onUser(user);
+      }else{
+        if(session)return;
+        booted=true;
+        if(first){first=false; go('login')}
+      }
+    });
   }
 
-  /* ingreso con usuario y contraseña */
-  function renderLogin(){Array.prototype.forEach.call(document.querySelectorAll('.pw-wrap'),function(w){var i=w.querySelector('input'),b=w.querySelector('.pw-toggle'); if(i.type!=='password'){i.type='password'; b.textContent='Ver'; b.setAttribute('aria-pressed','false'); b.setAttribute('aria-label','Mostrar contraseña')}}); $('#l-user').value=lsGet('paq_lastuser'); $('#l-pass').value=''; $('#err-login').textContent=''}
-  function lockLeft(){var t=parseInt(lsGet('paq_lock'),10)||0; return Math.ceil((t-Date.now())/1000)}
+  /* ingreso con correo y contraseña */
+  function renderLogin(){
+    Array.prototype.forEach.call(document.querySelectorAll('.pw-wrap'),function(w){var i=w.querySelector('input'),b=w.querySelector('.pw-toggle'); if(i.type!=='password'){i.type='password'; b.textContent='Ver'; b.setAttribute('aria-pressed','false'); b.setAttribute('aria-label','Mostrar contraseña')}});
+    $('#l-user').value=lsGet('paq_lastuser'); $('#l-pass').value='';
+    $('#err-login').textContent=booted?loginMsg:'Conectando…'; loginMsg='';
+    $('#login-go').disabled=false;
+  }
   $('#f-login').addEventListener('submit',function(e){
     e.preventDefault();
-    var err=$('#err-login'), name=$('#l-user').value.trim().toLowerCase(), pass=$('#l-pass').value;
-    if(!db){err.textContent='Este navegador no permite guardar datos (¿ventana privada?). Abrí la app en una ventana normal.';return}
-    var wait=lockLeft();
-    if(wait>0){err.textContent='Demasiados intentos. Esperá '+wait+' segundos.';return}
-    var u=users.find(function(x){return x.usuario===name})||users.find(function(x){return x.usuario===slugUser(name)});
-    hashPin(pass,u?u.salt:'0000000000000000').then(function(h){
-      if(u&&u.activo&&h===u.hash){lsSet('paq_fails','0'); $('#l-pass').value=''; startSession(u)}
-      else{
-        var n=(parseInt(lsGet('paq_fails'),10)||0)+1; $('#l-pass').value='';
-        if(n>=5){lsSet('paq_fails','0'); lsSet('paq_lock',String(Date.now()+30000)); err.textContent='Demasiados intentos. Esperá 30 segundos.'}
-        else{lsSet('paq_fails',String(n)); err.textContent='Correo o contraseña incorrectos.'}
-      }
+    var err=$('#err-login'), mail=$('#l-user').value.trim().toLowerCase(), pass=$('#l-pass').value, btn=$('#login-go');
+    if(!booted||!auth){err.textContent='Todavía estamos conectando. Probá de nuevo en un momento.';return}
+    if(!validEmail(mail)){err.textContent='Escribí tu correo completo, por ejemplo nombre@correo.com.';return}
+    if(!pass){err.textContent='Escribí tu contraseña.';return}
+    err.textContent=''; btn.disabled=true;
+    auth.signInWithEmailAndPassword(mail,pass).then(function(){
+      $('#l-pass').value='';
+    }).catch(function(x){
+      $('#l-pass').value=''; err.textContent=authMsg(x); btn.disabled=false;
     });
   });
 
@@ -715,17 +761,19 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     e.preventDefault();
     var mail=$('#o-mail').value.trim().toLowerCase(), err=$('#err-olvido'), box=$('#olvido-res');
     if(!validEmail(mail)){err.textContent='Escribí un correo válido, por ejemplo nombre@correo.com.';box.hidden=true;return}
+    if(!auth){err.textContent='No se pudo conectar. Recargá la app.';return}
     err.textContent='';
-    box.hidden=false;
-    box.innerHTML='<div class="preview"><b>Esta app guarda los datos en cada celular y no puede enviar correos.</b><ul>'+
-      '<li>Pedile a un administrador que te cree una contraseña nueva: en <b>Usuarios</b> toca <b>Editar</b> en tu perfil y escribe la nueva contraseña.</li>'+
-      '<li>Después ingresá con <b>'+esc(mail)+'</b> y esa contraseña. Podés cambiarla en <b>Mi cuenta</b>.</li>'+
-      '<li>Si sos el único administrador y la olvidaste, usá el respaldo de configuración de otro celular o pedí ayuda a quien instaló la app.</li></ul></div>';
+    auth.sendPasswordResetEmail(mail).then(function(){
+      box.hidden=false;
+      box.innerHTML='<div class="preview"><b>Listo. Si ese correo tiene cuenta, te enviamos un enlace para crear una contraseña nueva.</b><ul>'+
+        '<li>Revisá la bandeja de entrada y también la carpeta de spam.</li>'+
+        '<li>Después ingresá con <b>'+esc(mail)+'</b> y la contraseña nueva.</li></ul></div>';
+    }).catch(function(x){box.hidden=true; err.textContent=authMsg(x)});
   });
 
   /* ---------- Ajustes ---------- */
   function settings(){return{edif:lsGet('paq_edif')}}
-  function fillAjustes(){var s=settings();$('#c-edif').value=s.edif;$('#err-cfg').textContent='';cfgArmed=false;$('#cfg-import').textContent='Importar y reemplazar'}
+  function fillAjustes(){var s=settings();$('#c-edif').value=s.edif}
   $('#f-ajustes').addEventListener('submit',function(e){
     e.preventDefault(); if(!isAdmin())return;
     lsSet('paq_edif',$('#c-edif').value.trim());
@@ -827,15 +875,35 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     var mor=residentFor(dest,unidad), tel=$('#tel-aviso').value.trim();
     if(!mor&&tel&&!validPhone(tel)){err.textContent='Revisá el teléfono: ingresalo con característica, por ejemplo 11 5555 1111.';return}
     err.textContent='';
-    var n=Math.max(items.reduce(function(m,x){return Math.max(m,x.n||0)},0),parseInt(lsGet('paq_seq'),10)||0)+1; lsSet('paq_seq',String(n));
-    var it={id:'PQ-'+pad(n),n:n,ingreso:new Date().toISOString(),vigilador:session.nombre,destinatario:dest,unidad:unidad,foto:photo,estado:'pendiente',
-            moradorId:mor?mor.id:'', tel_aviso:(!mor&&tel)?tel:''};
-    items.push(it); lastPkg=it;
-    sPut('paquetes',it).then(function(){
+    var btnC=$('#f-cargar button[type=submit]'); btnC.disabled=true;
+    nextNumber().then(function(nn){
+      var it={id:nn.id,n:nn.n,ingreso:new Date().toISOString(),vigilador:session.nombre,destinatario:dest,unidad:unidad,foto:photo,estado:'pendiente',
+              moradorId:mor?mor.id:'', tel_aviso:(!mor&&tel)?tel:''};
+      items.push(it); lastPkg=it;
+      return sPut('paquetes',it);
+    }).then(function(){
+      btnC.disabled=false;
       $('#f-cargar').reset(); photo=''; $('#drop').innerHTML=dropDefault; $('#sugg').innerHTML=''; $('#tel-aviso').readOnly=false; $('#tel-wrap').hidden=true;
       renderPaquetes(); go('listo');
     });
   });
+  /* Número correlativo compartido por todos los celulares. Sin conexión usa uno local con sufijo. */
+  function nextNumber(){
+    var ref=db.collection('meta').doc('contador'), done=false;
+    return new Promise(function(res){
+      var t=setTimeout(function(){fallback()},4000);
+      function fallback(){
+        if(done)return; done=true; clearTimeout(t);
+        var n=items.reduce(function(m,x){return Math.max(m,x.n||0)},0)+1;
+        res({n:n,id:'PQ-'+pad(n)+'-'+Math.random().toString(36).slice(2,5)});
+      }
+      try{
+        db.runTransaction(function(tx){return tx.get(ref).then(function(d){var n=((d.exists&&d.data().n)||0)+1; tx.set(ref,{n:n}); return n})})
+          .then(function(n){ if(done)return; done=true; clearTimeout(t); res({n:n,id:'PQ-'+pad(n)}) })
+          .catch(fallback);
+      }catch(e){fallback()}
+    });
+  }
 
   /* ---------- Paquetes ---------- */
   function thumb(it){return it.foto?'<img class="thumb" alt="Foto del paquete" src="'+it.foto+'">':'<div class="thumb empty">Sin foto</div>'}
@@ -1191,7 +1259,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     $('#user-lista').innerHTML=list.map(function(u){
       var self=session&&u.id===session.id;
       return '<div class="card"><div class="info"><div class="dest">'+esc(u.nombre)+(self?' (vos)':'')+'</div>'+
-        '<div class="meta">'+(validEmail(u.usuario||'')?'correo: ':'usuario: ')+esc(u.usuario||'')+'</div>'+
+        '<div class="meta">correo: '+esc(u.usuario||u.id)+'</div>'+
         '<div class="unit"><span class="pill '+(u.rol==='admin'?'adm':'vig')+'">'+rolName(u.rol)+'</span>'+(u.activo?'':' <span class="pill off">Inactivo</span>')+'</div></div>'+
         '<div class="row"><button class="btn small" data-uedit="'+esc(u.id)+'">Editar</button>'+
         (self?'':'<button class="btn small" data-utoggle="'+esc(u.id)+'">'+(u.activo?'Desactivar':'Activar')+'</button><button class="btn small danger" data-udel="'+esc(u.id)+'">'+(delUserArmed===u.id?'Tocá de nuevo para eliminar':'Eliminar')+'</button>')+'</div></div>';
@@ -1199,33 +1267,49 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
   }
   function resetUserForm(){
     editingUser=null; $('#f-user').reset(); $('#user-form-title').textContent='Nuevo perfil'; $('#user-cancel').hidden=true;
-    $('#u-pin-lbl').textContent='Contraseña (mínimo 6 caracteres)'; $('#err-user').textContent='';
+    $('#u-usuario').readOnly=false; $('#u-pin-wrap').hidden=false; $('#user-reset').hidden=true; $('#user-save').disabled=false;
+    $('#u-pin-lbl').textContent='Contraseña inicial (mínimo 6 caracteres)'; $('#err-user').textContent='';
   }
   $('#user-cancel').addEventListener('click',resetUserForm);
+  /* para crear cuentas sin cerrar la sesión del administrador se usa una conexión aparte */
+  function secondaryAuth(){
+    var app; try{app=firebase.app('sec')}catch(e){app=firebase.initializeApp(FB_CONFIG,'sec')}
+    return app.auth();
+  }
+  $('#user-reset').addEventListener('click',function(){
+    if(!isAdmin()||!editingUser)return;
+    var mail=editingUser;
+    auth.sendPasswordResetEmail(mail).then(function(){toast('Enviamos el correo a '+mail)}).catch(function(x){$('#err-user').textContent=authMsg(x)});
+  });
   $('#f-user').addEventListener('submit',function(e){
     e.preventDefault(); if(!isAdmin())return;
     var n=$('#u-nombre').value.trim(), us=$('#u-usuario').value.trim().toLowerCase(), rol=$('#u-rol').value, pass=$('#u-pin').value, err=$('#err-user');
     if(!n){err.textContent='Falta el nombre.';return}
-    var prev=editingUser?users.find(function(x){return x.id===editingUser}):null;
-    if(!validEmail(us)&&!(prev&&prev.usuario===us&&validUser(us))){err.textContent='Escribí un correo electrónico válido, por ejemplo nombre@correo.com.';return}
+    if(!validEmail(us)){err.textContent='Escribí un correo electrónico válido, por ejemplo nombre@correo.com.';return}
     if(rol!=='admin'&&rol!=='vigilador')return;
-    if(users.some(function(x){return x.id!==editingUser&&x.usuario===us})){err.textContent='Ese correo ya está en otro perfil.';return}
     if(editingUser){
       var u=users.find(function(x){return x.id===editingUser}); if(!u)return;
       if(lastAdminGuard(u,rol,u.activo)){err.textContent='Tiene que quedar al menos un administrador activo.';return}
-      if(pass&&!validPass(pass)){err.textContent='La contraseña debe tener al menos 6 caracteres.';return}
       err.textContent='';
-      var p=Promise.resolve();
-      if(pass){var s=rnd(8); p=hashPin(pass,s).then(function(h){u.salt=s;u.hash=h})}
-      p.then(function(){u.nombre=n; u.usuario=us; u.rol=rol; return sPut('usuarios',u)}).then(function(){
-        if(session&&u.id===session.id){document.body.setAttribute('data-role',session.rol); renderMenu(); applySettings()}
+      u.nombre=n; u.rol=rol;
+      sPut('usuarios',u).then(function(){
         resetUserForm(); renderUsers(); renderHome(); toast('Perfil actualizado');
-        if(!isAdmin())go('home');
       });
     }else{
+      if(users.some(function(x){return x.id===us})){err.textContent='Ese correo ya tiene un perfil.';return}
       if(!validPass(pass)){err.textContent='La contraseña debe tener al menos 6 caracteres.';return}
-      err.textContent='';
-      newUser(n,us,rol,pass).then(function(u){users.push(u); return sPut('usuarios',u)}).then(function(){resetUserForm(); renderUsers(); renderHome(); toast('Perfil creado')});
+      err.textContent=''; $('#user-save').disabled=true;
+      var prof={id:us,usuario:us,nombre:n,rol:rol,activo:true}, sa=secondaryAuth();
+      function write(extra){
+        return sPut('usuarios',prof).then(function(){resetUserForm(); renderUsers(); renderHome(); toast(extra||'Perfil creado')});
+      }
+      sa.createUserWithEmailAndPassword(us,pass).then(function(){return sa.signOut()}).then(function(){return write()}).catch(function(x){
+        if(x&&x.code==='auth/email-already-in-use'){
+          write('Ese correo ya tenía cuenta: entra con su contraseña actual o con "¿Olvidaste tu contraseña?"');
+        }else{
+          $('#user-save').disabled=false; err.textContent=authMsg(x).replace('Correo o contraseña incorrectos.','No se pudo crear la cuenta. Revisá el correo y la conexión.');
+        }
+      });
     }
   });
   $('#user-lista').addEventListener('click',function(e){
@@ -1236,15 +1320,15 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
       if(lastAdminGuard(d,'vigilador',false)){toast('Tiene que quedar al menos un administrador activo'); return}
       if(delUserArmed!==d.id){delUserArmed=d.id; renderUsers(); return}
       delUserArmed=null;
-      if(d.id===SEED.id){try{localStorage.setItem('paq_noseed','1')}catch(_){}}
-      sDel('usuarios',d.id).then(function(){users=users.filter(function(x){return x.id!==d.id}); if(editingUser===d.id)resetUserForm(); renderUsers(); renderHome(); toast('Perfil eliminado')});
+      sDel('usuarios',d.id).then(function(){users=users.filter(function(x){return x.id!==d.id}); if(editingUser===d.id)resetUserForm(); renderUsers(); renderHome(); toast('Perfil eliminado: ya no puede entrar a la app')});
       return;
     }
     if(delUserArmed){delUserArmed=null; renderUsers()}
     if(ed){
       var u=users.find(function(x){return x.id===ed.dataset.uedit}); if(!u)return;
-      editingUser=u.id; $('#u-nombre').value=u.nombre; $('#u-usuario').value=u.usuario||''; $('#u-rol').value=u.rol; $('#u-pin').value='';
-      $('#user-form-title').textContent='Editar perfil'; $('#user-cancel').hidden=false; $('#u-pin-lbl').textContent='Contraseña nueva (opcional)';
+      editingUser=u.id; $('#u-nombre').value=u.nombre; $('#u-usuario').value=u.usuario||u.id; $('#u-rol').value=u.rol; $('#u-pin').value='';
+      $('#u-usuario').readOnly=true; $('#u-pin-wrap').hidden=true; $('#user-reset').hidden=false;
+      $('#user-form-title').textContent='Editar perfil';  $('#user-cancel').hidden=false;
       $('#f-user').scrollIntoView({behavior:'smooth',block:'center'});
     }
     if(tg){
@@ -1259,7 +1343,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
   function renderCuenta(){
     if(!session)return;
     $('#cuenta-info').innerHTML='<div class="kv"><b style="font-weight:700">'+esc(session.nombre)+'</b><span class="pill '+(session.rol==='admin'?'adm':'vig')+'">'+rolName(session.rol)+'</span></div>'+
-      '<p class="hint" style="margin-top:8px">'+(validEmail(session.usuario||'')?'Correo: ':'Usuario: ')+'<b>'+esc(session.usuario||'')+'</b></p>';
+      '<p class="hint" style="margin-top:8px">Correo: <b>'+esc(session.usuario||'')+'</b></p>';
     $('#err-pin').textContent='';
   }
   $('#f-pin').addEventListener('submit',function(e){
@@ -1267,13 +1351,16 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     var a=$('#p-actual').value, n=$('#p-nuevo').value, n2=$('#p-nuevo2').value, err=$('#err-pin');
     if(!validPass(n)){err.textContent='La contraseña nueva debe tener al menos 6 caracteres.';return}
     if(n!==n2){err.textContent='Las dos contraseñas nuevas no coinciden.';return}
-    hashPin(a,session.salt).then(function(h){
-      if(h!==session.hash){err.textContent='La contraseña actual no es correcta.';return}
-      var s=rnd(8);
-      return hashPin(n,s).then(function(nh){session.salt=s; session.hash=nh; return sPut('usuarios',session)}).then(function(){
-        $('#f-pin').reset(); err.textContent=''; toast('Contraseña cambiada');
-      });
-    });
+    var cu=auth&&auth.currentUser; if(!cu){err.textContent='Volvé a ingresar.';return}
+    var btn=$('#f-pin button[type=submit]'); btn.disabled=true;
+    cu.reauthenticateWithCredential(firebase.auth.EmailAuthProvider.credential(cu.email,a))
+      .then(function(){return cu.updatePassword(n)})
+      .then(function(){$('#f-pin').reset(); err.textContent=''; toast('Contraseña cambiada')})
+      .catch(function(x){
+        var c=x&&x.code;
+        err.textContent=(c==='auth/wrong-password'||c==='auth/invalid-credential'||c==='auth/invalid-login-credentials')?'La contraseña actual no es correcta.':authMsg(x);
+      })
+      .then(function(){btn.disabled=false});
   });
 
   /* ---------- Respaldo y exportación ---------- */
@@ -1286,64 +1373,9 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     copyText([head.join(',')].concat(rows).join('\n'),'Planilla copiada',$('#csv-fallback'));
   });
   function str(v,max){return typeof v==='string'?v.slice(0,max):''}
-  function parseConfig(text){
-    var o; try{o=JSON.parse(text)}catch(e){return null}
-    if(!o||o.app!=='secutec-paqueteria'||!Array.isArray(o.usuarios))return null;
-    var us=o.usuarios.map(function(u){
-      if(!u||typeof u!=='object')return null;
-      var id=str(u.id,40), nombre=str(u.nombre,80).trim(), salt=str(u.salt,64), hash=str(u.hash,80), uname=str(u.usuario,80).toLowerCase(); if(!validUser(uname))uname='';
-      if(!id||!nombre||!salt||!hash||(u.rol!=='admin'&&u.rol!=='vigilador'))return null;
-      return{id:id,nombre:nombre,usuario:uname,rol:u.rol,activo:u.activo!==false,salt:salt,hash:hash};
-    }).filter(Boolean);
-    ensureUsuarios(us);
-    if(!us.some(function(u){return u.rol==='admin'&&u.activo}))return null;
-    var ms=(Array.isArray(o.moradores)?o.moradores:[]).map(function(m){
-      if(!m||typeof m!=='object')return null;
-      var nombre=str(m.nombre,80).trim(); if(!nombre)return null;
-      return{id:str(m.id,40)||uid(),nombre:nombre,unidad:str(m.unidad,60),telefono:str(m.telefono,40),servicio:str(m.servicio,80)};
-    }).filter(Boolean);
-    var a=o.ajustes&&typeof o.ajustes==='object'?o.ajustes:{};
-    var sn=[]; (Array.isArray(o.servicios)?o.servicios:[]).concat(ms.map(function(m){return m.servicio})).forEach(function(n){n=typeof n==='string'?n.trim().slice(0,80):''; if(n&&sn.indexOf(n)<0)sn.push(n)});
-    return{usuarios:us,moradores:ms,servicios:sn,ajustes:{edif:str(a.edif,80)}};
-  }
-  function applyConfig(cfg){
-    users=cfg.usuarios; residents=cfg.moradores; servs=cfg.servicios.map(function(n){return{id:uid(),nombre:n}});
-    lsSet('paq_edif',cfg.ajustes.edif);
-    return sClear('usuarios').then(function(){return sPutMany('usuarios',users)})
-      .then(function(){return sClear('moradores')}).then(function(){return sPutMany('moradores',residents)})
-      .then(function(){return sClear('servicios')}).then(function(){return sPutMany('servicios',servs)});
-  }
-  $('#cfg-copy').addEventListener('click',function(){
-    if(!isAdmin())return;
-    var cfg={app:'secutec-paqueteria',v:1,usuarios:users,moradores:residents,servicios:servNames(),ajustes:settings()};
-    copyText(JSON.stringify(cfg),'Configuración copiada',$('#cfg-fallback'));
-  });
-  var cfgArmed=false;
-  $('#cfg-import').addEventListener('click',function(){
-    if(!isAdmin())return;
-    var cfg=parseConfig($('#cfg-text').value.trim()), err=$('#err-cfg');
-    if(!cfg){err.textContent='No se reconoce esa configuración. Copiala de nuevo desde Ajustes del otro celular.';cfgArmed=false;this.textContent='Importar y reemplazar';return}
-    if(!cfgArmed){cfgArmed=true; err.textContent=''; this.textContent='Tocá de nuevo: reemplaza perfiles y moradores'; return}
-    cfgArmed=false; this.textContent='Importar y reemplazar'; err.textContent=''; $('#cfg-text').value='';
-    applyConfig(cfg).then(function(){logout('Configuración importada. Ingresá de nuevo.')});
-  });
   /* ---------- Inicio de la app ---------- */
-  openDB().then(function(d){
-    db=d;
-    if(!d){go('login'); $('#err-login').textContent='Este navegador no permite guardar datos (¿ventana privada?). Abrí la app en una ventana normal.'; return}
-    return Promise.all([sAll('paquetes'),sAll('moradores'),sAll('usuarios'),sAll('servicios')]).then(function(r){
-      items=r[0]; residents=r[1]; users=r[2]; servs=r[3]||[];
-      var jobs=ensureUsuarios(users).map(function(u){return sPut('usuarios',u)});
-      var noSeed=false; try{noSeed=localStorage.getItem('paq_noseed')==='1'}catch(_){}
-      if(!noSeed&&!users.some(function(x){return x.id===SEED.id})){
-        var seed=Object.assign({activo:true},SEED);
-        if(users.some(function(x){return x.usuario===seed.usuario}))seed.usuario='admin.inicial';
-        users.push(seed); jobs.push(sPut('usuarios',seed));
-      }
-      jobs.push(ensureServs(residents.map(function(x){return x.servicio})));
-      return Promise.all(jobs);
-    }).then(function(){renderServ(); go('login')});
-  });
+  go('login');
+  bootAuth();
 })();
 </script>
 
