@@ -118,7 +118,7 @@ main{padding-top:22px}
 h2{margin:0; font-size:26px; font-weight:700; line-height:1.2}
 .panel{background:var(--surface); border:1px solid var(--line); border-radius:20px; padding:18px; display:flex; flex-direction:column; gap:14px; min-width:0}
 label,.lbl{display:block; font-size:13px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); margin-bottom:6px}
-input[type=text],input[type=search],input[type=tel],input[type=email],input[type=password],input[type=number],select,textarea{
+input[type=text],input[type=search],input[type=tel],input[type=email],input[type=password],select,textarea{
   width:100%; font:inherit; font-size:16px; color:var(--ink); background:var(--field); border:1px solid var(--line); border-radius:12px; padding:13px 14px;
 }
 input[type=password]{font-family:var(--f-mono)}
@@ -155,14 +155,6 @@ a.btn{display:flex; align-items:center; justify-content:center; text-decoration:
 .card{background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:12px; display:flex; flex-direction:column; gap:10px; min-width:0}
 .card-top{display:flex; gap:12px; min-width:0}
 .thumb{width:76px; height:76px; border-radius:12px; object-fit:cover; background:var(--field); border:1px solid var(--line); flex:none}
-.thumb{cursor:zoom-in}
-.lightbox{position:fixed; inset:0; z-index:100; background:rgba(5,10,20,.97); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; padding:16px}
-.lightbox[hidden]{display:none}
-.lightbox img{max-width:100%; max-height:calc(100dvh - 130px); object-fit:contain; border-radius:12px; background:#fff; touch-action:pinch-zoom}
-.lightbox .lb-bar{display:flex; gap:10px}
-.lightbox .lb-btn{border:1px solid rgba(255,255,255,.5); background:rgba(255,255,255,.14); color:#fff; font-size:15px; font-weight:700; border-radius:999px; padding:12px 22px; min-height:46px; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center}
-.lightbox .lb-btn:focus-visible{outline:2px solid #fff; outline-offset:2px}
-img.zoomable{cursor:zoom-in}
 .thumb.empty{display:grid; place-items:center; color:var(--muted); font-size:11px; text-align:center}
 .info{min-width:0; flex:1}
 .code{font-family:var(--f-mono); font-size:12px; color:var(--muted)}
@@ -268,10 +260,6 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     <form class="panel" id="f-cargar" autocomplete="off">
       <h2>Cargar paquete</h2>
       <div>
-        <label for="c-cons-ro">Consorcio 🔒</label>
-        <input type="text" id="c-cons-ro" readonly aria-readonly="true" tabindex="-1" placeholder="Sin definir: lo carga el administrador" style="opacity:.85">
-      </div>
-      <div>
         <span class="lbl">Foto del paquete</span>
         <label class="photo-drop" for="foto" id="drop" style="margin:0; text-transform:none; letter-spacing:0; font-size:16px; color:var(--muted)">
           <span class="e">📷</span><span>Tocar para sacar la foto</span>
@@ -358,13 +346,6 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
 
     <p class="hint admin-only" id="serv-link">Los servicios se cargan en la sección <b>Servicios</b>. <a href="#" data-go="servicios">Ir a Servicios</a></p>
 
-    <form class="panel admin-only" id="f-cons" autocomplete="off">
-      <span class="lbl" style="margin:0">Nombre del consorcio</span>
-      <p class="hint">Se usa en el mensaje de WhatsApp. Los vigiladores lo ven, pero no pueden cambiarlo.</p>
-      <input type="text" id="c-cons" maxlength="60" placeholder="Ej.: Consorcio Torre Norte">
-      <button class="btn primary" type="submit">Guardar nombre</button>
-    </form>
-
     <form class="panel admin-only" id="f-mor" autocomplete="off">
       <div class="sheet-head"><span class="lbl" style="margin:0" id="mor-form-title">Agregar morador</span><button type="button" class="btn small" id="mor-cancel" hidden>Cancelar</button></div>
       <div>
@@ -440,7 +421,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
         </div>
         <div id="u-pin-wrap"><label for="u-pin" id="u-pin-lbl">Contraseña (mínimo 6 caracteres)</label><input type="password" id="u-pin" maxlength="40" autocomplete="new-password"></div>
       </div>
-      <p class="hint">El correo se usa para ingresar. Los vigiladores cargan y entregan paquetes. Los administradores además manejan moradores, servicios y usuarios.</p>
+      <p class="hint">El correo se usa para ingresar. Los vigiladores cargan y entregan paquetes. Los administradores además manejan moradores, servicios, usuarios y ajustes.</p>
       <p class="err" id="err-user" role="alert"></p>
       <button class="btn" type="button" id="user-reset" hidden>Enviar correo para cambiar la contraseña</button>
       <button class="btn primary" type="submit" id="user-save">Guardar perfil</button>
@@ -471,16 +452,25 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     <button class="btn" data-action="logout" type="button">🚪 Cerrar sesión</button>
   </section>
 
+  <!-- Ajustes (administrador) -->
+  <section class="view" id="v-ajustes" hidden>
+    <button class="back" data-go="home">← Inicio</button>
+    <form class="panel" id="f-ajustes" autocomplete="off">
+      <h2>Ajustes</h2>
+      <div><label for="c-edif">Edificio o puesto</label><input type="text" id="c-edif" placeholder="Ej.: Torre Norte"></div>
+      <button class="btn primary" type="submit">Guardar</button>
+    </form>
+    <div class="panel">
+      <span class="lbl" style="margin:0">Planilla de paquetes</span>
+      <p class="hint">Copia todos los registros en formato CSV para pegar en Excel o Google Sheets.</p>
+      <button class="btn" type="button" id="copiar">Copiar planilla</button>
+      <div id="csv-fallback"></div>
+    </div>
+  </section>
+
 </div></main>
 
 <div class="toast" id="toast" hidden></div>
-<div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Imagen ampliada" hidden>
-  <img id="lb-img" alt="Imagen ampliada">
-  <div class="lb-bar">
-    <a class="lb-btn" id="lb-dl" download="paquete.jpg">Descargar</a>
-    <button class="lb-btn" id="lb-close" type="button">Cerrar</button>
-  </div>
-</div>
 
 <script>
 (function(){
@@ -568,7 +558,6 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
       if(!$('#v-usuarios').hidden)renderUsers();
     },60);
   }
-  var DIAS_LIMPIEZA=14, itemsReady=false, lastClean=0, consorcio='';
   function listen(name,assign){
     unsubs.push(db.collection(name).onSnapshot(function(snap){
       var arr=[]; snap.forEach(function(d){var o=d.data(); o.id=d.id; arr.push(o)});
@@ -577,18 +566,10 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
   }
   function startListeners(){
     stopListeners();
-    itemsReady=false; lastClean=0;
-    listen('paquetes',function(a){items=a; itemsReady=true; tryClean()});
+    listen('paquetes',function(a){items=a});
     listen('moradores',function(a){residents=a});
     listen('servicios',function(a){servs=a});
     if(isAdmin())listen('usuarios',function(a){users=a});
-    /* nombre del consorcio (compartido; solo lo cambia un administrador) */
-    unsubs.push(db.collection('meta').doc('consorcio').onSnapshot(function(d){
-      consorcio=d.exists?String((d.data()||{}).nombre||''):'';
-      $('#c-cons-ro').value=consorcio;
-      var inp=$('#c-cons'); if(document.activeElement!==inp)inp.value=consorcio;
-      applySettings(); scheduleRender();
-    },function(){}));
     /* si cambian mi perfil (rol o estado), la app lo refleja al instante */
     unsubs.push(db.collection('usuarios').doc(session.id).onSnapshot(function(d){
       if(!session)return;
@@ -656,11 +637,11 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
   }
 
   /* ---------- Navegación ---------- */
-  var views=['login','olvido','home','cargar','listo','paquetes','entregar','moradores','servicios','usuarios','cuenta'];
+  var views=['login','olvido','home','cargar','listo','paquetes','entregar','moradores','servicios','usuarios','cuenta','ajustes'];
   function go(v){
     if(!session&&v!=='login'&&v!=='olvido')v='login';
     if(session&&v==='login')v='home';
-    if((v==='usuarios'||v==='servicios')&&!isAdmin())v='home';
+    if((v==='usuarios'||v==='ajustes'||v==='servicios')&&!isAdmin())v='home';
     if(v==='listo'&&!lastPkg)v='home';
     views.forEach(function(x){$('#v-'+x).hidden=(x!==v)});
     closeMenu();
@@ -668,6 +649,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     if(v==='home')renderHome();
     if(v==='listo')renderListo();
     if(v==='cuenta')renderCuenta();
+    if(v==='ajustes')fillAjustes();
     if(v==='usuarios')renderUsers();
     if(v==='servicios')renderServ();
     if(v==='login')renderLogin();
@@ -691,6 +673,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     var it=[['home','🏠','Inicio'],['cargar','📦','Cargar paquete'],['paquetes','📋','Paquetes'],['moradores','👥','Moradores']];
     if(isAdmin())it.push(['servicios','🏢','Servicios'],['usuarios','🛡️','Usuarios']);
     it.push(['cuenta','👤','Mi cuenta']);
+    if(isAdmin())it.push(['ajustes','⚙️','Ajustes']);
     $('#menu-items').innerHTML=it.map(function(x){
       return '<button class="nav-item" data-go="'+x[0]+'"><span class="e">'+x[1]+'</span>'+x[2]+'</button>';
     }).join('')+'<div class="nav-sep"></div><button class="nav-item" data-action="logout"><span class="e">🚪</span>Cerrar sesión</button>';
@@ -788,34 +771,14 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     }).catch(function(x){box.hidden=true; err.textContent=authMsg(x)});
   });
 
-  /* ---------- Limpieza automática de entregados antiguos ---------- */
-  /* Solo corre cuando un administrador abre la app: borra los entregados con 14 días o más desde la entrega. */
-  function settings(){return{edif:consorcio}}
-  $('#f-cons').addEventListener('submit',function(e){
+  /* ---------- Ajustes ---------- */
+  function settings(){return{edif:lsGet('paq_edif')}}
+  function fillAjustes(){var s=settings();$('#c-edif').value=s.edif}
+  $('#f-ajustes').addEventListener('submit',function(e){
     e.preventDefault(); if(!isAdmin())return;
-    var n=$('#c-cons').value.trim().slice(0,60);
-    sPut('meta',{id:'consorcio',nombre:n}); consorcio=n; $('#c-cons-ro').value=n; applySettings(); scheduleRender();
-    toast(n?'Consorcio guardado':'Nombre del consorcio borrado');
+    lsSet('paq_edif',$('#c-edif').value.trim());
+    applySettings(); toast('Ajustes guardados');
   });
-  function oldDelivered(){
-    var cut=Date.now()-DIAS_LIMPIEZA*86400000;
-    return items.filter(function(x){
-      if(x.estado!=='entregado')return false;
-      var ms=x.entregaMs||Date.parse(x.entrega);
-      return ms&&ms<cut;
-    });
-  }
-  function tryClean(){
-    if(!session||!isAdmin()||!db||!itemsReady)return;
-    if(Date.now()-lastClean<3600000)return;
-    lastClean=Date.now();
-    var old=oldDelivered().slice(0,300), del=0;
-    old.forEach(function(x){
-      try{del++; db.collection('paquetes').doc(x.id).delete().catch(function(){})}catch(e){}
-    });
-    if(del)toast('Limpieza: se borraron '+del+' entregado'+(del===1?'':'s')+' con más de 2 semanas');
-  }
-  document.addEventListener('visibilitychange',function(){if(!document.hidden)tryClean()});
   function applySettings(){
     var s=settings();
     var chips=[]; if(s.edif)chips.push('🏢 '+s.edif); if(session)chips.push('👤 '+session.nombre+' · '+rolName(session.rol));
@@ -842,6 +805,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     if(isAdmin())t.push({g:'servicios',c:'c1',e:'🏢',t:'Servicios',s:servs.length?(servs.length+(servs.length===1?' cargado':' cargados')):'Cargá los servicios'});
     if(isAdmin())t.push({g:'usuarios',c:'c5',e:'🛡️',t:'Usuarios',s:users.filter(function(u){return u.activo}).length+' activos'});
     t.push({g:'cuenta',c:'c4',e:'👤',t:'Mi Cuenta',s:'Perfil y contraseña'});
+    if(isAdmin())t.push({g:'ajustes',c:'c6',e:'⚙️',t:'Ajustes',s:'Edificio y respaldo'});
     $('#tiles').innerHTML=t.map(function(x){
       return '<button class="tile '+x.c+'" data-go="'+x.g+'">'+(x.d?'<span class="dot">'+x.d+'</span>':'')+'<span class="e">'+x.e+'</span><b>'+x.t+'</b><small>'+esc(x.s)+'</small></button>';
     }).join('');
@@ -914,7 +878,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     var btnC=$('#f-cargar button[type=submit]'); btnC.disabled=true;
     nextNumber().then(function(nn){
       var it={id:nn.id,n:nn.n,ingreso:new Date().toISOString(),vigilador:session.nombre,destinatario:dest,unidad:unidad,foto:photo,estado:'pendiente',
-              moradorId:mor?mor.id:'', servicio:mor?(mor.servicio||''):'', tel_aviso:(!mor&&tel)?tel:''};
+              moradorId:mor?mor.id:'', tel_aviso:(!mor&&tel)?tel:''};
       items.push(it); lastPkg=it;
       return sPut('paquetes',it);
     }).then(function(){
@@ -942,7 +906,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
   }
 
   /* ---------- Paquetes ---------- */
-  function thumb(it){return it.foto?'<img class="thumb" alt="Foto del paquete: tocá para ampliar" src="'+it.foto+'">':'<div class="thumb empty">Sin foto</div>'}
+  function thumb(it){return it.foto?'<img class="thumb" alt="Foto del paquete" src="'+it.foto+'">':'<div class="thumb empty">Sin foto</div>'}
   function setSeg(s){
     $('#s-pend').setAttribute('aria-selected',String(s==='pend')); $('#s-hist').setAttribute('aria-selected',String(s==='hist'));
     $('#p-pend').hidden=(s!=='pend'); $('#p-hist').hidden=(s!=='hist');
@@ -953,11 +917,11 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     var done=items.filter(function(x){return x.estado==='entregado'}).sort(function(a,b){return a.entrega<b.entrega?1:-1});
     $('#s-pend').textContent='Pendientes ('+pend.length+')'; $('#s-hist').textContent='Entregados ('+done.length+')';
     var qq=norm($('#buscar').value.trim());
-    var shown=pend.filter(function(x){return !qq||norm(x.destinatario+' '+x.unidad+' '+svOf(x)).indexOf(qq)>=0});
+    var shown=pend.filter(function(x){return !qq||norm(x.destinatario+' '+x.unidad).indexOf(qq)>=0});
     $('#lista-pend').innerHTML=shown.length?shown.map(function(it){
       return '<div class="card"><div class="card-top">'+thumb(it)+'<div class="info">'+
         '<div class="code">'+esc(it.id)+' · <span class="pill wait">Pendiente</span></div>'+
-        '<div class="dest">'+esc(it.destinatario)+'</div><div class="unit">'+svPill(it)+esc(it.unidad)+'</div>'+
+        '<div class="dest">'+esc(it.destinatario)+'</div><div class="unit">'+esc(it.unidad)+'</div>'+
         '<div class="meta">Ingresó '+esc(fmt(it.ingreso))+(it.vigilador?' · '+esc(it.vigilador):'')+'</div>'+
         '<div class="meta">'+(it.avisado?'Aviso abierto '+esc(fmt(it.avisado)):'Sin avisar')+'</div></div></div>'+
         '<div class="row">'+avisoBtn(it)+'<button class="btn primary" data-entregar="'+esc(it.id)+'">Entregar</button></div>'+delBtn(it)+'</div>';
@@ -966,7 +930,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     $('#lista-hist').innerHTML=done.length?done.map(function(it){
       return '<div class="card"><div class="card-top">'+thumb(it)+'<div class="info">'+
         '<div class="code">'+esc(it.id)+' · <span class="pill done">Entregado</span></div>'+
-        '<div class="dest">'+esc(it.destinatario)+'</div><div class="unit">'+svPill(it)+esc(it.unidad)+'</div>'+
+        '<div class="dest">'+esc(it.destinatario)+'</div><div class="unit">'+esc(it.unidad)+'</div>'+
         '<div class="meta">Retiró '+esc(it.retira_nombre)+' · '+esc(fmt(it.entrega))+'</div></div></div>'+
         '<details class="det"><summary>Ver constancia</summary><div class="det-body"><dl>'+
         '<dt>Ingreso</dt><dd>'+esc(fmt(it.ingreso))+'</dd><dt>Recibió</dt><dd>'+esc(it.vigilador||'Sin dato')+'</dd>'+
@@ -974,16 +938,10 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
         '<dt>Aviso</dt><dd>'+(it.avisado?'Abierto '+esc(fmt(it.avisado))+(it.avisado_por?' · '+esc(it.avisado_por):''):'No se avisó')+'</dd>'+
         '<dt>Retiró</dt><dd>'+esc(it.retira_nombre)+'</dd>'+
         '<dt>DNI</dt><dd>'+esc(it.retira_dni||'No registrado')+'</dd></dl>'+
-        (it.firma?'<img class="zoomable" alt="Firma de quien retiró: tocá para ampliar" src="'+it.firma+'">':'<p class="hint">Sin firma.</p>')+'</div></details>'+delBtn(it)+'</div>';
+        (it.firma?'<img alt="Firma de quien retiró" src="'+it.firma+'">':'<p class="hint">Sin firma.</p>')+'</div></details>'+delBtn(it)+'</div>';
     }).join(''):'<div class="empty-state"><strong>Todavía no hay entregas</strong>Cuando entregues un paquete, la constancia queda guardada acá.</div>';
     renderHome();
   }
-  function svOf(it){
-    if(it.servicio)return it.servicio;
-    var r=residents.find(function(x){return x.id===it.moradorId})||residentFor(it.destinatario,it.unidad);
-    return r&&r.servicio?r.servicio:'';
-  }
-  function svPill(it){var v=svOf(it); return v?'<span class="pill adm">'+esc(v)+'</span> ':''}
   function phoneFor(it){
     if(it.tel_aviso)return toWa(it.tel_aviso);
     var r=residents.find(function(x){return x.id===it.moradorId})||residentFor(it.destinatario,it.unidad);
@@ -1003,7 +961,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     if(!lastPkg)return;
     var it=lastPkg, n=phoneFor(it), h='';
     $('#listo-title').textContent='✅ Registrado '+it.id;
-    $('#listo-sub').textContent=it.destinatario+' · '+it.unidad+(svOf(it)?' · '+svOf(it):'');
+    $('#listo-sub').textContent=it.destinatario+' · '+it.unidad;
     if(n){
       h='<a class="btn primary" data-avisar="'+esc(it.id)+'" target="_blank" rel="noopener" href="'+esc(waLink(it,n))+'">💬 '+(it.avisado?'Avisar de nuevo por WhatsApp':'Avisar por WhatsApp')+'</a>'+
         '<p class="hint">Se abre WhatsApp con el mensaje ya escrito. Solo tenés que tocar enviar.'+(it.avisado?' Aviso abierto '+esc(fmt(it.avisado))+'.':'')+'</p>'+
@@ -1048,7 +1006,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
   $('#lista-pend').addEventListener('click',function(e){
     var b=e.target.closest('[data-entregar]'); if(!b)return;
     current=items.find(function(x){return x.id===b.dataset.entregar}); if(!current)return;
-    $('#resumen').innerHTML='<div class="card"><div class="card-top">'+thumb(current)+'<div class="info"><div class="code">'+esc(current.id)+'</div><div class="dest">'+esc(current.destinatario)+'</div><div class="unit">'+svPill(current)+esc(current.unidad)+'</div></div></div></div>';
+    $('#resumen').innerHTML='<div class="card"><div class="card-top">'+thumb(current)+'<div class="info"><div class="code">'+esc(current.id)+'</div><div class="dest">'+esc(current.destinatario)+'</div><div class="unit">'+esc(current.unidad)+'</div></div></div></div>';
     $('#f-entregar').reset(); $('#err-entregar').textContent='';
     go('entregar'); sizeCanvas(); clearSig();
   });
@@ -1077,7 +1035,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     if(!dni&&!signed){err.textContent='Registrá el DNI o la firma de quien retira.';return}
     if(dni&&(dni.length<6||dni.length>9)){err.textContent='Revisá el DNI: debería tener entre 6 y 9 números.';return}
     err.textContent='';
-    current.estado='entregado'; current.entrega=new Date().toISOString(); current.entregaMs=Date.now(); current.entrego_por=session.nombre;
+    current.estado='entregado'; current.entrega=new Date().toISOString(); current.entrego_por=session.nombre;
     current.retira_nombre=nombre; current.retira_dni=dni; current.firma=signed?cv.toDataURL('image/png'):'';
     var id=current.id;
     sPut('paquetes',current).then(function(){current=null; renderPaquetes(); setSeg('pend'); go('paquetes'); toast('Entrega registrada · '+id)});
@@ -1405,24 +1363,16 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
       .then(function(){btn.disabled=false});
   });
 
-  function str(v,max){return typeof v==='string'?v.slice(0,max):''}
-  /* ---------- Ver imágenes en grande ---------- */
-  function openLightbox(src,name){
-    $('#lb-img').src=src; var a=$('#lb-dl'); a.href=src; a.download=name||'imagen.jpg';
-    $('#lightbox').hidden=false; $('#lb-close').focus();
-  }
-  function closeLightbox(){$('#lightbox').hidden=true; $('#lb-img').removeAttribute('src')}
-  document.addEventListener('click',function(e){
-    var im=e.target.closest('img.thumb, img.zoomable');
-    if(im&&!$('#lightbox').contains(im)){
-      e.preventDefault();
-      var card=im.closest('.card'), code=card&&card.querySelector('.code')?card.querySelector('.code').textContent.split(' ')[0]:'paquete';
-      openLightbox(im.src,code+(im.classList.contains('zoomable')?'-firma.png':'-foto.jpg')); return;
-    }
-    if(e.target.id==='lightbox'||e.target.id==='lb-close')closeLightbox();
+  /* ---------- Respaldo y exportación ---------- */
+  $('#copiar').addEventListener('click',function(){
+    if(!isAdmin())return;
+    var head=['codigo','ingreso','recibio','destinatario','unidad','estado','entrega','entrego','retiro_nombre','retiro_dni','aviso'];
+    var rows=items.slice().sort(function(a,b){return a.n-b.n}).map(function(x){
+      return [x.id,x.ingreso,x.vigilador,x.destinatario,x.unidad,x.estado,x.entrega,x.entrego_por,x.retira_nombre,x.retira_dni,x.avisado].map(q).join(',');
+    });
+    copyText([head.join(',')].concat(rows).join('\n'),'Planilla copiada',$('#csv-fallback'));
   });
-  document.addEventListener('keydown',function(e){if(e.key==='Escape'&&!$('#lightbox').hidden)closeLightbox()});
-
+  function str(v,max){return typeof v==='string'?v.slice(0,max):''}
   /* ---------- Inicio de la app ---------- */
   go('login');
   bootAuth();
