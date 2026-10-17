@@ -1,0 +1,7 @@
+SecuTec Paquetería - archivos para GitHub Pages
+
+Subí TODOS estos archivos a la raíz de tu repositorio (sin carpetas):
+  index.html, manifest.json, sw.js, icon-192.png, icon-512.png,
+  icon-maskable-512.png, apple-touch-icon.png
+
+Después: Settings > Pages > Deploy from a branch > main / (root) > Save.
