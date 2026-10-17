@@ -1,5 +1,5 @@
 /* Soporte sin conexión. Si cambiás index.html, subí también este archivo con un número de versión nuevo. */
-var VERSION = 'paqueteria-v19';
+var VERSION = 'paqueteria-v27';
 var CORE = ['./', 'index.html', 'manifest.json', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
 
 self.addEventListener('install', function (e) {
