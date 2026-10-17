@@ -118,7 +118,7 @@ main{padding-top:22px}
 h2{margin:0; font-size:26px; font-weight:700; line-height:1.2}
 .panel{background:var(--surface); border:1px solid var(--line); border-radius:20px; padding:18px; display:flex; flex-direction:column; gap:14px; min-width:0}
 label,.lbl{display:block; font-size:13px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); margin-bottom:6px}
-input[type=text],input[type=search],input[type=tel],input[type=email],input[type=password],select,textarea{
+input[type=text],input[type=search],input[type=tel],input[type=email],input[type=password],input[type=number],select,textarea{
   width:100%; font:inherit; font-size:16px; color:var(--ink); background:var(--field); border:1px solid var(--line); border-radius:12px; padding:13px 14px;
 }
 input[type=password]{font-family:var(--f-mono)}
@@ -268,6 +268,10 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     <form class="panel" id="f-cargar" autocomplete="off">
       <h2>Cargar paquete</h2>
       <div>
+        <label for="c-cons-ro">Consorcio 🔒</label>
+        <input type="text" id="c-cons-ro" readonly aria-readonly="true" tabindex="-1" placeholder="Sin definir: lo carga el administrador" style="opacity:.85">
+      </div>
+      <div>
         <span class="lbl">Foto del paquete</span>
         <label class="photo-drop" for="foto" id="drop" style="margin:0; text-transform:none; letter-spacing:0; font-size:16px; color:var(--muted)">
           <span class="e">📷</span><span>Tocar para sacar la foto</span>
@@ -354,6 +358,13 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
 
     <p class="hint admin-only" id="serv-link">Los servicios se cargan en la sección <b>Servicios</b>. <a href="#" data-go="servicios">Ir a Servicios</a></p>
 
+    <form class="panel admin-only" id="f-cons" autocomplete="off">
+      <span class="lbl" style="margin:0">Nombre del consorcio</span>
+      <p class="hint">Se usa en el mensaje de WhatsApp. Los vigiladores lo ven, pero no pueden cambiarlo.</p>
+      <input type="text" id="c-cons" maxlength="60" placeholder="Ej.: Consorcio Torre Norte">
+      <button class="btn primary" type="submit">Guardar nombre</button>
+    </form>
+
     <form class="panel admin-only" id="f-mor" autocomplete="off">
       <div class="sheet-head"><span class="lbl" style="margin:0" id="mor-form-title">Agregar morador</span><button type="button" class="btn small" id="mor-cancel" hidden>Cancelar</button></div>
       <div>
@@ -429,7 +440,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
         </div>
         <div id="u-pin-wrap"><label for="u-pin" id="u-pin-lbl">Contraseña (mínimo 6 caracteres)</label><input type="password" id="u-pin" maxlength="40" autocomplete="new-password"></div>
       </div>
-      <p class="hint">El correo se usa para ingresar. Los vigiladores cargan y entregan paquetes. Los administradores además manejan moradores, servicios, usuarios y ajustes.</p>
+      <p class="hint">El correo se usa para ingresar. Los vigiladores cargan y entregan paquetes. Los administradores además manejan moradores, servicios y usuarios.</p>
       <p class="err" id="err-user" role="alert"></p>
       <button class="btn" type="button" id="user-reset" hidden>Enviar correo para cambiar la contraseña</button>
       <button class="btn primary" type="submit" id="user-save">Guardar perfil</button>
@@ -458,22 +469,6 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
       <button class="btn primary" type="submit">Cambiar contraseña</button>
     </form>
     <button class="btn" data-action="logout" type="button">🚪 Cerrar sesión</button>
-  </section>
-
-  <!-- Ajustes (administrador) -->
-  <section class="view" id="v-ajustes" hidden>
-    <button class="back" data-go="home">← Inicio</button>
-    <form class="panel" id="f-ajustes" autocomplete="off">
-      <h2>Ajustes</h2>
-      <div><label for="c-edif">Edificio o puesto</label><input type="text" id="c-edif" placeholder="Ej.: Torre Norte"></div>
-      <button class="btn primary" type="submit">Guardar</button>
-    </form>
-    <div class="panel">
-      <span class="lbl" style="margin:0">Planilla de paquetes</span>
-      <p class="hint">Copia todos los registros en formato CSV para pegar en Excel o Google Sheets.</p>
-      <button class="btn" type="button" id="copiar">Copiar planilla</button>
-      <div id="csv-fallback"></div>
-    </div>
   </section>
 
 </div></main>
@@ -573,6 +568,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
       if(!$('#v-usuarios').hidden)renderUsers();
     },60);
   }
+  var DIAS_LIMPIEZA=14, itemsReady=false, lastClean=0, consorcio='';
   function listen(name,assign){
     unsubs.push(db.collection(name).onSnapshot(function(snap){
       var arr=[]; snap.forEach(function(d){var o=d.data(); o.id=d.id; arr.push(o)});
@@ -581,10 +577,18 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
   }
   function startListeners(){
     stopListeners();
-    listen('paquetes',function(a){items=a});
+    itemsReady=false; lastClean=0;
+    listen('paquetes',function(a){items=a; itemsReady=true; tryClean()});
     listen('moradores',function(a){residents=a});
     listen('servicios',function(a){servs=a});
     if(isAdmin())listen('usuarios',function(a){users=a});
+    /* nombre del consorcio (compartido; solo lo cambia un administrador) */
+    unsubs.push(db.collection('meta').doc('consorcio').onSnapshot(function(d){
+      consorcio=d.exists?String((d.data()||{}).nombre||''):'';
+      $('#c-cons-ro').value=consorcio;
+      var inp=$('#c-cons'); if(document.activeElement!==inp)inp.value=consorcio;
+      applySettings(); scheduleRender();
+    },function(){}));
     /* si cambian mi perfil (rol o estado), la app lo refleja al instante */
     unsubs.push(db.collection('usuarios').doc(session.id).onSnapshot(function(d){
       if(!session)return;
@@ -652,11 +656,11 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
   }
 
   /* ---------- Navegación ---------- */
-  var views=['login','olvido','home','cargar','listo','paquetes','entregar','moradores','servicios','usuarios','cuenta','ajustes'];
+  var views=['login','olvido','home','cargar','listo','paquetes','entregar','moradores','servicios','usuarios','cuenta'];
   function go(v){
     if(!session&&v!=='login'&&v!=='olvido')v='login';
     if(session&&v==='login')v='home';
-    if((v==='usuarios'||v==='ajustes'||v==='servicios')&&!isAdmin())v='home';
+    if((v==='usuarios'||v==='servicios')&&!isAdmin())v='home';
     if(v==='listo'&&!lastPkg)v='home';
     views.forEach(function(x){$('#v-'+x).hidden=(x!==v)});
     closeMenu();
@@ -664,7 +668,6 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     if(v==='home')renderHome();
     if(v==='listo')renderListo();
     if(v==='cuenta')renderCuenta();
-    if(v==='ajustes')fillAjustes();
     if(v==='usuarios')renderUsers();
     if(v==='servicios')renderServ();
     if(v==='login')renderLogin();
@@ -688,7 +691,6 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     var it=[['home','🏠','Inicio'],['cargar','📦','Cargar paquete'],['paquetes','📋','Paquetes'],['moradores','👥','Moradores']];
     if(isAdmin())it.push(['servicios','🏢','Servicios'],['usuarios','🛡️','Usuarios']);
     it.push(['cuenta','👤','Mi cuenta']);
-    if(isAdmin())it.push(['ajustes','⚙️','Ajustes']);
     $('#menu-items').innerHTML=it.map(function(x){
       return '<button class="nav-item" data-go="'+x[0]+'"><span class="e">'+x[1]+'</span>'+x[2]+'</button>';
     }).join('')+'<div class="nav-sep"></div><button class="nav-item" data-action="logout"><span class="e">🚪</span>Cerrar sesión</button>';
@@ -786,14 +788,34 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     }).catch(function(x){box.hidden=true; err.textContent=authMsg(x)});
   });
 
-  /* ---------- Ajustes ---------- */
-  function settings(){return{edif:lsGet('paq_edif')}}
-  function fillAjustes(){var s=settings();$('#c-edif').value=s.edif}
-  $('#f-ajustes').addEventListener('submit',function(e){
+  /* ---------- Limpieza automática de entregados antiguos ---------- */
+  /* Solo corre cuando un administrador abre la app: borra los entregados con 14 días o más desde la entrega. */
+  function settings(){return{edif:consorcio}}
+  $('#f-cons').addEventListener('submit',function(e){
     e.preventDefault(); if(!isAdmin())return;
-    lsSet('paq_edif',$('#c-edif').value.trim());
-    applySettings(); toast('Ajustes guardados');
+    var n=$('#c-cons').value.trim().slice(0,60);
+    sPut('meta',{id:'consorcio',nombre:n}); consorcio=n; $('#c-cons-ro').value=n; applySettings(); scheduleRender();
+    toast(n?'Consorcio guardado':'Nombre del consorcio borrado');
   });
+  function oldDelivered(){
+    var cut=Date.now()-DIAS_LIMPIEZA*86400000;
+    return items.filter(function(x){
+      if(x.estado!=='entregado')return false;
+      var ms=x.entregaMs||Date.parse(x.entrega);
+      return ms&&ms<cut;
+    });
+  }
+  function tryClean(){
+    if(!session||!isAdmin()||!db||!itemsReady)return;
+    if(Date.now()-lastClean<3600000)return;
+    lastClean=Date.now();
+    var old=oldDelivered().slice(0,300), del=0;
+    old.forEach(function(x){
+      try{del++; db.collection('paquetes').doc(x.id).delete().catch(function(){})}catch(e){}
+    });
+    if(del)toast('Limpieza: se borraron '+del+' entregado'+(del===1?'':'s')+' con más de 2 semanas');
+  }
+  document.addEventListener('visibilitychange',function(){if(!document.hidden)tryClean()});
   function applySettings(){
     var s=settings();
     var chips=[]; if(s.edif)chips.push('🏢 '+s.edif); if(session)chips.push('👤 '+session.nombre+' · '+rolName(session.rol));
@@ -820,7 +842,6 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     if(isAdmin())t.push({g:'servicios',c:'c1',e:'🏢',t:'Servicios',s:servs.length?(servs.length+(servs.length===1?' cargado':' cargados')):'Cargá los servicios'});
     if(isAdmin())t.push({g:'usuarios',c:'c5',e:'🛡️',t:'Usuarios',s:users.filter(function(u){return u.activo}).length+' activos'});
     t.push({g:'cuenta',c:'c4',e:'👤',t:'Mi Cuenta',s:'Perfil y contraseña'});
-    if(isAdmin())t.push({g:'ajustes',c:'c6',e:'⚙️',t:'Ajustes',s:'Edificio y respaldo'});
     $('#tiles').innerHTML=t.map(function(x){
       return '<button class="tile '+x.c+'" data-go="'+x.g+'">'+(x.d?'<span class="dot">'+x.d+'</span>':'')+'<span class="e">'+x.e+'</span><b>'+x.t+'</b><small>'+esc(x.s)+'</small></button>';
     }).join('');
@@ -1056,7 +1077,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     if(!dni&&!signed){err.textContent='Registrá el DNI o la firma de quien retira.';return}
     if(dni&&(dni.length<6||dni.length>9)){err.textContent='Revisá el DNI: debería tener entre 6 y 9 números.';return}
     err.textContent='';
-    current.estado='entregado'; current.entrega=new Date().toISOString(); current.entrego_por=session.nombre;
+    current.estado='entregado'; current.entrega=new Date().toISOString(); current.entregaMs=Date.now(); current.entrego_por=session.nombre;
     current.retira_nombre=nombre; current.retira_dni=dni; current.firma=signed?cv.toDataURL('image/png'):'';
     var id=current.id;
     sPut('paquetes',current).then(function(){current=null; renderPaquetes(); setSeg('pend'); go('paquetes'); toast('Entrega registrada · '+id)});
@@ -1384,15 +1405,6 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
       .then(function(){btn.disabled=false});
   });
 
-  /* ---------- Respaldo y exportación ---------- */
-  $('#copiar').addEventListener('click',function(){
-    if(!isAdmin())return;
-    var head=['codigo','ingreso','recibio','destinatario','servicio','unidad','estado','entrega','entrego','retiro_nombre','retiro_dni','aviso'];
-    var rows=items.slice().sort(function(a,b){return a.n-b.n}).map(function(x){
-      return [x.id,x.ingreso,x.vigilador,x.destinatario,svOf(x),x.unidad,x.estado,x.entrega,x.entrego_por,x.retira_nombre,x.retira_dni,x.avisado].map(q).join(',');
-    });
-    copyText([head.join(',')].concat(rows).join('\n'),'Planilla copiada',$('#csv-fallback'));
-  });
   function str(v,max){return typeof v==='string'?v.slice(0,max):''}
   /* ---------- Ver imágenes en grande ---------- */
   function openLightbox(src,name){
