@@ -155,6 +155,14 @@ a.btn{display:flex; align-items:center; justify-content:center; text-decoration:
 .card{background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:12px; display:flex; flex-direction:column; gap:10px; min-width:0}
 .card-top{display:flex; gap:12px; min-width:0}
 .thumb{width:76px; height:76px; border-radius:12px; object-fit:cover; background:var(--field); border:1px solid var(--line); flex:none}
+.thumb{cursor:zoom-in}
+.lightbox{position:fixed; inset:0; z-index:100; background:rgba(5,10,20,.97); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; padding:16px}
+.lightbox[hidden]{display:none}
+.lightbox img{max-width:100%; max-height:calc(100dvh - 130px); object-fit:contain; border-radius:12px; background:#fff; touch-action:pinch-zoom}
+.lightbox .lb-bar{display:flex; gap:10px}
+.lightbox .lb-btn{border:1px solid rgba(255,255,255,.5); background:rgba(255,255,255,.14); color:#fff; font-size:15px; font-weight:700; border-radius:999px; padding:12px 22px; min-height:46px; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center}
+.lightbox .lb-btn:focus-visible{outline:2px solid #fff; outline-offset:2px}
+img.zoomable{cursor:zoom-in}
 .thumb.empty{display:grid; place-items:center; color:var(--muted); font-size:11px; text-align:center}
 .info{min-width:0; flex:1}
 .code{font-family:var(--f-mono); font-size:12px; color:var(--muted)}
@@ -471,6 +479,13 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
 </div></main>
 
 <div class="toast" id="toast" hidden></div>
+<div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Imagen ampliada" hidden>
+  <img id="lb-img" alt="Imagen ampliada">
+  <div class="lb-bar">
+    <a class="lb-btn" id="lb-dl" download="paquete.jpg">Descargar</a>
+    <button class="lb-btn" id="lb-close" type="button">Cerrar</button>
+  </div>
+</div>
 
 <script>
 (function(){
@@ -878,7 +893,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     var btnC=$('#f-cargar button[type=submit]'); btnC.disabled=true;
     nextNumber().then(function(nn){
       var it={id:nn.id,n:nn.n,ingreso:new Date().toISOString(),vigilador:session.nombre,destinatario:dest,unidad:unidad,foto:photo,estado:'pendiente',
-              moradorId:mor?mor.id:'', tel_aviso:(!mor&&tel)?tel:''};
+              moradorId:mor?mor.id:'', servicio:mor?(mor.servicio||''):'', tel_aviso:(!mor&&tel)?tel:''};
       items.push(it); lastPkg=it;
       return sPut('paquetes',it);
     }).then(function(){
@@ -906,7 +921,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
   }
 
   /* ---------- Paquetes ---------- */
-  function thumb(it){return it.foto?'<img class="thumb" alt="Foto del paquete" src="'+it.foto+'">':'<div class="thumb empty">Sin foto</div>'}
+  function thumb(it){return it.foto?'<img class="thumb" alt="Foto del paquete: tocá para ampliar" src="'+it.foto+'">':'<div class="thumb empty">Sin foto</div>'}
   function setSeg(s){
     $('#s-pend').setAttribute('aria-selected',String(s==='pend')); $('#s-hist').setAttribute('aria-selected',String(s==='hist'));
     $('#p-pend').hidden=(s!=='pend'); $('#p-hist').hidden=(s!=='hist');
@@ -917,11 +932,11 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     var done=items.filter(function(x){return x.estado==='entregado'}).sort(function(a,b){return a.entrega<b.entrega?1:-1});
     $('#s-pend').textContent='Pendientes ('+pend.length+')'; $('#s-hist').textContent='Entregados ('+done.length+')';
     var qq=norm($('#buscar').value.trim());
-    var shown=pend.filter(function(x){return !qq||norm(x.destinatario+' '+x.unidad).indexOf(qq)>=0});
+    var shown=pend.filter(function(x){return !qq||norm(x.destinatario+' '+x.unidad+' '+svOf(x)).indexOf(qq)>=0});
     $('#lista-pend').innerHTML=shown.length?shown.map(function(it){
       return '<div class="card"><div class="card-top">'+thumb(it)+'<div class="info">'+
         '<div class="code">'+esc(it.id)+' · <span class="pill wait">Pendiente</span></div>'+
-        '<div class="dest">'+esc(it.destinatario)+'</div><div class="unit">'+esc(it.unidad)+'</div>'+
+        '<div class="dest">'+esc(it.destinatario)+'</div><div class="unit">'+svPill(it)+esc(it.unidad)+'</div>'+
         '<div class="meta">Ingresó '+esc(fmt(it.ingreso))+(it.vigilador?' · '+esc(it.vigilador):'')+'</div>'+
         '<div class="meta">'+(it.avisado?'Aviso abierto '+esc(fmt(it.avisado)):'Sin avisar')+'</div></div></div>'+
         '<div class="row">'+avisoBtn(it)+'<button class="btn primary" data-entregar="'+esc(it.id)+'">Entregar</button></div>'+delBtn(it)+'</div>';
@@ -930,7 +945,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     $('#lista-hist').innerHTML=done.length?done.map(function(it){
       return '<div class="card"><div class="card-top">'+thumb(it)+'<div class="info">'+
         '<div class="code">'+esc(it.id)+' · <span class="pill done">Entregado</span></div>'+
-        '<div class="dest">'+esc(it.destinatario)+'</div><div class="unit">'+esc(it.unidad)+'</div>'+
+        '<div class="dest">'+esc(it.destinatario)+'</div><div class="unit">'+svPill(it)+esc(it.unidad)+'</div>'+
         '<div class="meta">Retiró '+esc(it.retira_nombre)+' · '+esc(fmt(it.entrega))+'</div></div></div>'+
         '<details class="det"><summary>Ver constancia</summary><div class="det-body"><dl>'+
         '<dt>Ingreso</dt><dd>'+esc(fmt(it.ingreso))+'</dd><dt>Recibió</dt><dd>'+esc(it.vigilador||'Sin dato')+'</dd>'+
@@ -938,10 +953,16 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
         '<dt>Aviso</dt><dd>'+(it.avisado?'Abierto '+esc(fmt(it.avisado))+(it.avisado_por?' · '+esc(it.avisado_por):''):'No se avisó')+'</dd>'+
         '<dt>Retiró</dt><dd>'+esc(it.retira_nombre)+'</dd>'+
         '<dt>DNI</dt><dd>'+esc(it.retira_dni||'No registrado')+'</dd></dl>'+
-        (it.firma?'<img alt="Firma de quien retiró" src="'+it.firma+'">':'<p class="hint">Sin firma.</p>')+'</div></details>'+delBtn(it)+'</div>';
+        (it.firma?'<img class="zoomable" alt="Firma de quien retiró: tocá para ampliar" src="'+it.firma+'">':'<p class="hint">Sin firma.</p>')+'</div></details>'+delBtn(it)+'</div>';
     }).join(''):'<div class="empty-state"><strong>Todavía no hay entregas</strong>Cuando entregues un paquete, la constancia queda guardada acá.</div>';
     renderHome();
   }
+  function svOf(it){
+    if(it.servicio)return it.servicio;
+    var r=residents.find(function(x){return x.id===it.moradorId})||residentFor(it.destinatario,it.unidad);
+    return r&&r.servicio?r.servicio:'';
+  }
+  function svPill(it){var v=svOf(it); return v?'<span class="pill adm">'+esc(v)+'</span> ':''}
   function phoneFor(it){
     if(it.tel_aviso)return toWa(it.tel_aviso);
     var r=residents.find(function(x){return x.id===it.moradorId})||residentFor(it.destinatario,it.unidad);
@@ -961,7 +982,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     if(!lastPkg)return;
     var it=lastPkg, n=phoneFor(it), h='';
     $('#listo-title').textContent='✅ Registrado '+it.id;
-    $('#listo-sub').textContent=it.destinatario+' · '+it.unidad;
+    $('#listo-sub').textContent=it.destinatario+' · '+it.unidad+(svOf(it)?' · '+svOf(it):'');
     if(n){
       h='<a class="btn primary" data-avisar="'+esc(it.id)+'" target="_blank" rel="noopener" href="'+esc(waLink(it,n))+'">💬 '+(it.avisado?'Avisar de nuevo por WhatsApp':'Avisar por WhatsApp')+'</a>'+
         '<p class="hint">Se abre WhatsApp con el mensaje ya escrito. Solo tenés que tocar enviar.'+(it.avisado?' Aviso abierto '+esc(fmt(it.avisado))+'.':'')+'</p>'+
@@ -1006,7 +1027,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
   $('#lista-pend').addEventListener('click',function(e){
     var b=e.target.closest('[data-entregar]'); if(!b)return;
     current=items.find(function(x){return x.id===b.dataset.entregar}); if(!current)return;
-    $('#resumen').innerHTML='<div class="card"><div class="card-top">'+thumb(current)+'<div class="info"><div class="code">'+esc(current.id)+'</div><div class="dest">'+esc(current.destinatario)+'</div><div class="unit">'+esc(current.unidad)+'</div></div></div></div>';
+    $('#resumen').innerHTML='<div class="card"><div class="card-top">'+thumb(current)+'<div class="info"><div class="code">'+esc(current.id)+'</div><div class="dest">'+esc(current.destinatario)+'</div><div class="unit">'+svPill(current)+esc(current.unidad)+'</div></div></div></div>';
     $('#f-entregar').reset(); $('#err-entregar').textContent='';
     go('entregar'); sizeCanvas(); clearSig();
   });
@@ -1366,13 +1387,30 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
   /* ---------- Respaldo y exportación ---------- */
   $('#copiar').addEventListener('click',function(){
     if(!isAdmin())return;
-    var head=['codigo','ingreso','recibio','destinatario','unidad','estado','entrega','entrego','retiro_nombre','retiro_dni','aviso'];
+    var head=['codigo','ingreso','recibio','destinatario','servicio','unidad','estado','entrega','entrego','retiro_nombre','retiro_dni','aviso'];
     var rows=items.slice().sort(function(a,b){return a.n-b.n}).map(function(x){
-      return [x.id,x.ingreso,x.vigilador,x.destinatario,x.unidad,x.estado,x.entrega,x.entrego_por,x.retira_nombre,x.retira_dni,x.avisado].map(q).join(',');
+      return [x.id,x.ingreso,x.vigilador,x.destinatario,svOf(x),x.unidad,x.estado,x.entrega,x.entrego_por,x.retira_nombre,x.retira_dni,x.avisado].map(q).join(',');
     });
     copyText([head.join(',')].concat(rows).join('\n'),'Planilla copiada',$('#csv-fallback'));
   });
   function str(v,max){return typeof v==='string'?v.slice(0,max):''}
+  /* ---------- Ver imágenes en grande ---------- */
+  function openLightbox(src,name){
+    $('#lb-img').src=src; var a=$('#lb-dl'); a.href=src; a.download=name||'imagen.jpg';
+    $('#lightbox').hidden=false; $('#lb-close').focus();
+  }
+  function closeLightbox(){$('#lightbox').hidden=true; $('#lb-img').removeAttribute('src')}
+  document.addEventListener('click',function(e){
+    var im=e.target.closest('img.thumb, img.zoomable');
+    if(im&&!$('#lightbox').contains(im)){
+      e.preventDefault();
+      var card=im.closest('.card'), code=card&&card.querySelector('.code')?card.querySelector('.code').textContent.split(' ')[0]:'paquete';
+      openLightbox(im.src,code+(im.classList.contains('zoomable')?'-firma.png':'-foto.jpg')); return;
+    }
+    if(e.target.id==='lightbox'||e.target.id==='lb-close')closeLightbox();
+  });
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'&&!$('#lightbox').hidden)closeLightbox()});
+
   /* ---------- Inicio de la app ---------- */
   go('login');
   bootAuth();
