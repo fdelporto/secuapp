@@ -57,7 +57,8 @@ img{max-width:100%}
 }
 *{box-sizing:border-box}
 html,body{min-height:100%}
-body{background:var(--bg); color:var(--ink); font-family:var(--f-body); font-size:16px; line-height:1.45; margin:0; padding-bottom:calc(32px + env(safe-area-inset-bottom,0px))}
+body{background:var(--bg); color:var(--ink); font-family:var(--f-body); font-size:16px; line-height:1.45; margin:0; padding-bottom:calc(32px + env(safe-area-inset-bottom,0px)); display:flex; flex-direction:column; min-height:100vh}
+.app-foot{margin-top:auto; padding:24px 16px 0; text-align:center; font-family:var(--f-mono); font-size:12px; color:var(--muted)}
 body::before{content:""; position:fixed; inset:0 0 auto; height:env(safe-area-inset-top,0px); background:var(--brand); z-index:30}
 body[data-auth="0"] #menu-btn{visibility:hidden}
 body:not([data-role="admin"]) .admin-only{display:none!important}
@@ -275,6 +276,10 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
         <label for="c-cons-ro">Consorcio 🔒</label>
         <input type="text" id="c-cons-ro" readonly aria-readonly="true" tabindex="-1" placeholder="Sin definir: lo carga el administrador" style="opacity:.85">
       </div>
+      <div id="rec-wrap" hidden>
+        <label for="g-recibe">Quién recibe</label>
+        <select id="g-recibe"></select>
+      </div>
       <div>
         <span class="lbl">Foto del paquete</span>
         <label class="photo-drop" for="foto" id="drop" style="margin:0; text-transform:none; letter-spacing:0; font-size:16px; color:var(--muted)">
@@ -337,6 +342,10 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     <form class="panel" id="f-entregar" autocomplete="off">
       <h2>Entrega</h2>
       <div id="resumen"></div>
+      <div id="ent-wrap" hidden>
+        <label for="g-entrega">Quién entrega</label>
+        <select id="g-entrega"></select>
+      </div>
       <div>
         <label for="r-nombre">Nombre de quien retira</label>
         <input type="text" id="r-nombre" placeholder="Nombre y apellido" required>
@@ -346,9 +355,9 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
         <input type="tel" id="r-dni" inputmode="numeric" placeholder="Sin puntos">
       </div>
       <div>
-        <div class="sheet-head"><span class="lbl" style="margin:0">Firma</span><button type="button" class="btn small" id="limpiar">Borrar firma</button></div>
+        <div class="sheet-head"><span class="lbl" style="margin:0">Firma (obligatoria)</span><button type="button" class="btn small" id="limpiar">Borrar firma</button></div>
         <canvas class="sig" id="sig" aria-label="Espacio para firmar" style="margin-top:6px"></canvas>
-        <p class="hint" style="margin-top:6px">Alcanza con DNI o firma. Si hay ambos, mejor.</p>
+        <p class="hint" style="margin-top:6px">El morador tiene que firmar siempre. El DNI es opcional.</p>
       </div>
       <p class="err" id="err-entregar" role="alert"></p>
       <button class="btn primary" type="submit">Confirmar entrega</button>
@@ -427,6 +436,22 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
 
   </section>
 
+  <!-- Vigiladores (administrador) -->
+  <section class="view" id="v-guardias" hidden>
+    <button class="back" data-go="home">← Inicio</button>
+    <h2>Vigiladores</h2>
+    <div class="panel">
+      <span class="lbl" style="margin:0" id="gd-count">Vigiladores</span>
+      <p class="hint">Cargá acá los nombres de los vigiladores del servicio. Al recibir y al entregar un paquete se elige uno de esta lista.</p>
+      <form class="row" id="f-gd" autocomplete="off" style="align-items:flex-end">
+        <div><label for="gd-nombre">Nuevo vigilador</label><input type="text" id="gd-nombre" maxlength="60" placeholder="Nombre y apellido" required></div>
+        <button class="btn primary" type="submit" style="flex:0 0 auto">Agregar</button>
+      </form>
+      <p class="err" id="err-gd" role="alert"></p>
+      <div id="gd-lista"></div>
+    </div>
+  </section>
+
   <!-- Usuarios (administrador) -->
   <section class="view" id="v-usuarios" hidden>
     <button class="back" data-go="home">← Inicio</button>
@@ -473,11 +498,11 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
       <button class="btn primary" type="submit">Cambiar contraseña</button>
     </form>
     <button class="btn" data-action="logout" type="button">🚪 Cerrar sesión</button>
-    <p class="hint" id="app-ver" style="text-align:center; margin:4px 0 0">Versión 28</p>
   </section>
 
 </div></main>
 
+<footer class="app-foot" id="app-foot"></footer>
 <div class="toast" id="toast" hidden></div>
 <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Imagen ampliada" hidden>
   <img id="lb-img" alt="Imagen ampliada">
@@ -489,8 +514,10 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
 
 <script>
 (function(){
+  var APP_VERSION=31; /* se actualiza en cada entrega: también define el número de la caché (sw.js) y el nombre del zip */
   var $=function(s){return document.querySelector(s)};
   var $$=function(s){return Array.prototype.slice.call(document.querySelectorAll(s))};
+  $('#app-foot').textContent='Demo 0.'+APP_VERSION+'v';
   var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]})};
   var norm=function(s){return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase()};
   function lsGet(k){try{return localStorage.getItem(k)||''}catch(e){return ''}}
@@ -531,7 +558,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     messagingSenderId:'691919710359',
     appId:'1:691919710359:web:3ae07576652ddc831a61d2'
   };
-  var db=null, auth=null, booted=false, loginMsg='', items=[], residents=[], servs=[], users=[], session=null, lastPkg=null, unsubs=[];
+  var db=null, auth=null, booted=false, loginMsg='', items=[], residents=[], servs=[], guards=[], users=[], session=null, lastPkg=null, unsubs=[];
   function initFirebase(){
     try{
       if(!window.firebase||!firebase.initializeApp)return false;
@@ -569,7 +596,8 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     clearTimeout(renderT);
     renderT=setTimeout(function(){
       if(!session)return;
-      renderPaquetes(); renderRes(); renderServ();
+      renderPaquetes(); renderRes(); renderServ(); fillGuards();
+      if(!$('#v-guardias').hidden)renderGuards();
       if(!$('#v-usuarios').hidden)renderUsers();
     },60);
   }
@@ -586,6 +614,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     listen('paquetes',function(a){items=a; itemsReady=true; tryClean()});
     listen('moradores',function(a){residents=a});
     listen('servicios',function(a){servs=a});
+    listen('guardias',function(a){guards=a});
     if(isAdmin())listen('usuarios',function(a){users=a});
     /* nombre del consorcio (compartido; solo lo cambia un administrador) */
     unsubs.push(db.collection('meta').doc('consorcio').onSnapshot(function(d){
@@ -661,13 +690,13 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
   }
 
   /* ---------- Navegación ---------- */
-  var views=['login','olvido','home','cargar','listo','paquetes','entregar','moradores','servicios','usuarios','cuenta'];
+  var views=['login','olvido','home','cargar','listo','paquetes','entregar','moradores','servicios','guardias','usuarios','cuenta'];
   var curView='login', exitArmed=false, exitT=null;
   function histState(){return history.state&&history.state.app?history.state:null}
   function go(v,fromPop){
     if(!session&&v!=='login'&&v!=='olvido')v='login';
     if(session&&v==='login')v='home';
-    if((v==='usuarios'||v==='servicios')&&!isAdmin())v='home';
+    if((v==='usuarios'||v==='servicios'||v==='guardias')&&!isAdmin())v='home';
     if(v==='listo'&&!lastPkg)v='home';
     views.forEach(function(x){$('#v-'+x).hidden=(x!==v)});
     closeMenu();
@@ -677,6 +706,8 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     if(v==='cuenta')renderCuenta();
     if(v==='usuarios')renderUsers();
     if(v==='servicios')renderServ();
+    if(v==='guardias')renderGuards();
+    if(v==='cargar'||v==='entregar')fillGuards();
     if(v==='login')renderLogin();
     if(v==='olvido'){$('#o-mail').value=$('#l-user')?$('#l-user').value.trim():''; $('#err-olvido').textContent=''; $('#olvido-res').hidden=true; $('#olvido-res').innerHTML=''}
     window.scrollTo(0,0);
@@ -726,7 +757,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
 
   function renderMenu(){
     var it=[['home','🏠','Inicio'],['cargar','📦','Cargar paquete'],['paquetes','📋','Paquetes'],['moradores','👥','Moradores']];
-    if(isAdmin())it.push(['servicios','🏢','Servicios'],['usuarios','🛡️','Usuarios']);
+    if(isAdmin())it.push(['servicios','🏢','Servicios'],['guardias','👮','Vigiladores'],['usuarios','🛡️','Usuarios']);
     it.push(['cuenta','👤','Mi cuenta']);
     $('#menu-items').innerHTML=it.map(function(x){
       return '<button class="nav-item" data-go="'+x[0]+'"><span class="e">'+x[1]+'</span>'+x[2]+'</button>';
@@ -746,7 +777,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
   }
   function logout(msg){
     stopListeners();
-    session=null; current=null; lastPkg=null; items=[]; residents=[]; servs=[]; users=[];
+    session=null; current=null; lastPkg=null; items=[]; residents=[]; servs=[]; guards=[]; users=[];
     document.body.setAttribute('data-auth','0'); document.body.removeAttribute('data-role');
     $('#chips').innerHTML='';
     ['#f-pin','#f-login','#f-cargar','#f-entregar'].forEach(function(s){try{$(s).reset()}catch(e){}});
@@ -895,6 +926,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
       {g:'moradores',c:'c3',e:'👥',t:'Moradores',s:residents.length?(residents.length+' cargados'):(isAdmin()?'Cargá la lista':'Lista vacía')}
     ];
     if(isAdmin())t.push({g:'servicios',c:'c1',e:'🏢',t:'Servicios',s:servs.length?(servs.length+(servs.length===1?' cargado':' cargados')):'Cargá los servicios'});
+    if(isAdmin())t.push({g:'guardias',c:'c4',e:'👮',t:'Vigiladores',s:guards.length?(guards.length+(guards.length===1?' cargado':' cargados')):'Cargá los nombres'});
     if(isAdmin())t.push({g:'usuarios',c:'c5',e:'🛡️',t:'Usuarios',s:users.filter(function(u){return u.activo}).length+' activos'});
     t.push({g:'cuenta',c:'c4',e:'👤',t:'Mi Cuenta',s:'Perfil y contraseña'});
     $('#tiles').innerHTML=t.map(function(x){
@@ -965,16 +997,19 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     if(!dest||!unidad){err.textContent='Completá destinatario y unidad.';return}
     var mor=residentFor(dest,unidad), tel=$('#tel-aviso').value.trim();
     if(!mor&&tel&&!validPhone(tel)){err.textContent='Revisá el teléfono: ingresalo con característica, por ejemplo 11 5555 1111.';return}
+    var recibe=guardNames().length?$('#g-recibe').value:session.nombre;
+    if(!recibe){err.textContent='Elegí quién recibe el paquete.';return}
+    if(guardNames().length)lsSet('paq_last_recibe',recibe);
     err.textContent='';
     var btnC=$('#f-cargar button[type=submit]'); btnC.disabled=true;
     nextNumber().then(function(nn){
-      var it={id:nn.id,n:nn.n,ingreso:new Date().toISOString(),vigilador:session.nombre,destinatario:dest,unidad:unidad,foto:photo,estado:'pendiente',
+      var it={id:nn.id,n:nn.n,ingreso:new Date().toISOString(),vigilador:recibe,registro_por:session.nombre,destinatario:dest,unidad:unidad,foto:photo,estado:'pendiente',
               moradorId:mor?mor.id:'', servicio:mor?(mor.servicio||''):'', tel_aviso:(!mor&&tel)?tel:''};
       items.push(it); lastPkg=it;
       return sPut('paquetes',it);
     }).then(function(){
       btnC.disabled=false;
-      $('#f-cargar').reset(); photo=''; $('#drop').innerHTML=dropDefault; $('#sugg').innerHTML=''; $('#tel-aviso').readOnly=false; $('#tel-wrap').hidden=true;
+      $('#f-cargar').reset(); fillGuards(); photo=''; $('#drop').innerHTML=dropDefault; $('#sugg').innerHTML=''; $('#tel-aviso').readOnly=false; $('#tel-wrap').hidden=true;
       renderPaquetes(); go('listo');
     });
   });
@@ -1104,12 +1139,12 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     var b=e.target.closest('[data-entregar]'); if(!b)return;
     current=items.find(function(x){return x.id===b.dataset.entregar}); if(!current)return;
     $('#resumen').innerHTML='<div class="card"><div class="card-top">'+thumb(current)+'<div class="info"><div class="code">'+esc(current.id)+'</div><div class="dest">'+esc(current.destinatario)+'</div><div class="unit">'+svPill(current)+esc(current.unidad)+'</div></div></div></div>';
-    $('#f-entregar').reset(); $('#err-entregar').textContent='';
+    $('#f-entregar').reset(); $('#err-entregar').textContent=''; fillGuards();
     go('entregar'); sizeCanvas(); clearSig();
   });
 
   /* ---------- Firma ---------- */
-  var cv=$('#sig'), ctx=cv.getContext('2d'), drawing=false, signed=false;
+  var cv=$('#sig'), ctx=cv.getContext('2d'), drawing=false, signed=false, sigLen=0, strokes=0, lastPt=null, SIG_MIN=80, SIG_MAX=3000, STROKES_MAX=10;
   function sizeCanvas(){
     var r=cv.getBoundingClientRect(), d=window.devicePixelRatio||1; if(!r.width)return;
     cv.width=Math.round(r.width*d); cv.height=Math.round(r.height*d);
@@ -1121,13 +1156,13 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     var x=c.getContext('2d'); x.fillStyle='#fff'; x.fillRect(0,0,c.width,c.height); x.drawImage(cv,0,0);
     return c.toDataURL('image/png');
   }
-  function clearSig(){ctx.save(); ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,cv.width,cv.height); ctx.restore(); signed=false}
+  function clearSig(){ctx.save(); ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,cv.width,cv.height); ctx.restore(); signed=false; sigLen=0; strokes=0; lastPt=null}
   function pos(e){var r=cv.getBoundingClientRect(); return{x:e.clientX-r.left,y:e.clientY-r.top}}
   cv.addEventListener('pointerdown',function(e){
-    drawing=true; signed=true; try{cv.setPointerCapture(e.pointerId)}catch(x){}
-    var p=pos(e); ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(p.x+0.1,p.y+0.1); ctx.stroke(); e.preventDefault();
+    drawing=true; signed=true; strokes++; try{cv.setPointerCapture(e.pointerId)}catch(x){}
+    var p=pos(e); lastPt=p; ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(p.x+0.1,p.y+0.1); ctx.stroke(); e.preventDefault();
   });
-  cv.addEventListener('pointermove',function(e){if(!drawing)return; var p=pos(e); ctx.lineTo(p.x,p.y); ctx.stroke(); e.preventDefault()});
+  cv.addEventListener('pointermove',function(e){if(!drawing)return; var p=pos(e); if(lastPt)sigLen+=Math.hypot(p.x-lastPt.x,p.y-lastPt.y); lastPt=p; ctx.lineTo(p.x,p.y); ctx.stroke(); e.preventDefault()});
   ['pointerup','pointercancel','pointerleave'].forEach(function(n){cv.addEventListener(n,function(){drawing=false})});
   $('#limpiar').addEventListener('click',clearSig);
   window.addEventListener('resize',function(){if(!$('#v-entregar').hidden&&!signed)sizeCanvas()});
@@ -1135,11 +1170,16 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     e.preventDefault(); if(!current||!session)return;
     var nombre=$('#r-nombre').value.trim(), dni=$('#r-dni').value.replace(/\D/g,''), err=$('#err-entregar');
     if(!nombre){err.textContent='Falta el nombre de quien retira.';return}
-    if(!dni&&!signed){err.textContent='Registrá el DNI o la firma de quien retira.';return}
+    if(!signed){err.textContent='La firma es obligatoria: el morador tiene que firmar en el recuadro.';return}
+    if(sigLen<SIG_MIN){err.textContent='La firma es muy corta. Pedile al morador que firme completa.';return}
+    if(strokes>STROKES_MAX||sigLen>SIG_MAX){err.textContent='La firma tiene demasiados trazos. Tiene que ser solo la firma, sin dibujos ni garabatos. Tocá "Borrar firma" y que firme de nuevo.';return}
     if(dni&&(dni.length<6||dni.length>9)){err.textContent='Revisá el DNI: debería tener entre 6 y 9 números.';return}
+    var entrega=guardNames().length?$('#g-entrega').value:session.nombre;
+    if(!entrega){err.textContent='Elegí quién entrega el paquete.';return}
+    if(guardNames().length)lsSet('paq_last_entrega',entrega);
     err.textContent='';
-    current.estado='entregado'; current.entrega=new Date().toISOString(); current.entregaMs=Date.now(); current.entrego_por=session.nombre;
-    current.retira_nombre=nombre; current.retira_dni=dni; current.firma=signed?sigPng():'';
+    current.estado='entregado'; current.entrega=new Date().toISOString(); current.entregaMs=Date.now(); current.entrego_por=entrega; current.entrega_registro_por=session.nombre;
+    current.retira_nombre=nombre; current.retira_dni=dni; current.firma=sigPng();
     var id=current.id;
     sPut('paquetes',current).then(function(){current=null; renderPaquetes(); setSeg('pend'); go('paquetes'); toast('Entrega registrada · '+id)});
   });
@@ -1183,6 +1223,43 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     if(servDelArmed!==sv.id){servDelArmed=sv.id; renderServ(); return}
     servDelArmed=null; servs=servs.filter(function(x){return x.id!==sv.id});
     sDel('servicios',sv.id).then(function(){renderServ(); renderHome(); toast('Servicio eliminado')});
+  });
+  /* ---------- Vigiladores del servicio (los carga el administrador) ---------- */
+  var guardDelArmed=null;
+  function guardNames(){return guards.map(function(x){return x.nombre}).sort(function(a,b){return a.localeCompare(b,'es')})}
+  function fillGuardSel(sel,wrap,key){
+    var el=$(sel), w=$(wrap); if(!el||!w)return;
+    var names=guardNames(), cur=el.value||lsGet(key);
+    w.hidden=!names.length;
+    el.innerHTML='<option value="">— Elegí quién —</option>'+names.map(function(n){return '<option value="'+esc(n)+'">'+esc(n)+'</option>'}).join('');
+    el.value=(cur&&names.indexOf(cur)>=0)?cur:'';
+  }
+  function fillGuards(){fillGuardSel('#g-recibe','#rec-wrap','paq_last_recibe'); fillGuardSel('#g-entrega','#ent-wrap','paq_last_entrega')}
+  function renderGuards(){
+    if(!$('#gd-lista'))return;
+    $('#gd-count').textContent='Vigiladores · '+guards.length;
+    $('#gd-lista').innerHTML=guards.length?guardNames().map(function(n){
+      var g=guards.find(function(x){return x.nombre===n});
+      return '<div class="card"><div class="info"><div class="dest">'+esc(n)+'</div></div>'+
+        '<div class="row"><button class="btn small danger" data-gdel="'+esc(g.id)+'">'+(guardDelArmed===g.id?'Tocá de nuevo para eliminar':'Eliminar')+'</button></div></div>';
+    }).join(''):'<div class="empty-state">Todavía no hay vigiladores cargados. Mientras la lista esté vacía, se usa el nombre de quien tiene la sesión abierta.</div>';
+  }
+  $('#f-gd').addEventListener('submit',function(e){
+    e.preventDefault(); if(!isAdmin())return;
+    var n=$('#gd-nombre').value.trim().replace(/\s+/g,' '), err=$('#err-gd');
+    if(!n)return;
+    if(guards.some(function(x){return norm(x.nombre)===norm(n)})){err.textContent='Ese vigilador ya está cargado.';return}
+    err.textContent='';
+    var o={id:uid('G'),nombre:n}; guards.push(o);
+    sPut('guardias',o).then(function(){$('#gd-nombre').value=''; renderGuards(); fillGuards(); renderHome(); toast('Vigilador agregado')});
+  });
+  $('#gd-lista').addEventListener('click',function(e){
+    if(!isAdmin())return;
+    var b=e.target.closest('[data-gdel]'); if(!b)return;
+    var g=guards.find(function(x){return x.id===b.dataset.gdel}); if(!g)return;
+    if(guardDelArmed!==g.id){guardDelArmed=g.id; renderGuards(); setTimeout(function(){if(guardDelArmed===g.id){guardDelArmed=null; renderGuards()}},4000); return}
+    guardDelArmed=null; guards=guards.filter(function(x){return x.id!==g.id});
+    sDel('guardias',g.id).then(function(){renderGuards(); fillGuards(); renderHome(); toast('Vigilador eliminado de la lista')});
   });
   function ensureServs(names){
     var add=[];
