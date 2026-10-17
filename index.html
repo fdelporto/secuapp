@@ -283,7 +283,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
       <div>
         <span class="lbl">Foto del paquete</span>
         <label class="photo-drop" for="foto" id="drop" style="margin:0; text-transform:none; letter-spacing:0; font-size:16px; color:var(--muted)">
-          <span class="e">📷</span><span>Tocar para sacar la foto</span>
+          <span class="e">📷</span><span>Tocar para sacar la foto (obligatoria)</span>
         </label>
         <input type="file" id="foto" accept="image/*" capture="environment" hidden>
       </div>
@@ -514,7 +514,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
 
 <script>
 (function(){
-  var APP_VERSION=31; /* se actualiza en cada entrega: también define el número de la caché (sw.js) y el nombre del zip */
+  var APP_VERSION=32; /* se actualiza en cada entrega: también define el número de la caché (sw.js) y el nombre del zip */
   var $=function(s){return document.querySelector(s)};
   var $$=function(s){return Array.prototype.slice.call(document.querySelectorAll(s))};
   $('#app-foot').textContent='Demo 0.'+APP_VERSION+'v';
@@ -994,6 +994,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
   $('#f-cargar').addEventListener('submit',function(e){
     e.preventDefault(); if(!session)return;
     var dest=$('#dest').value.trim(), unidad=$('#unidad').value.trim(), err=$('#err-cargar');
+    if(!photo){err.textContent='La foto del paquete es obligatoria. Tocá el recuadro para sacarla.';$('#drop').scrollIntoView({block:'center'});return}
     if(!dest||!unidad){err.textContent='Completá destinatario y unidad.';return}
     var mor=residentFor(dest,unidad), tel=$('#tel-aviso').value.trim();
     if(!mor&&tel&&!validPhone(tel)){err.textContent='Revisá el teléfono: ingresalo con característica, por ejemplo 11 5555 1111.';return}
