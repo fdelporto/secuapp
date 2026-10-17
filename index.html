@@ -191,14 +191,30 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
   <section class="view" id="v-login" hidden>
     <div class="hero">
       <h1>🔐 Ingresá</h1>
-      <p>Escribí tu usuario y tu contraseña. Si no tenés, pedísela a un administrador.</p>
+      <p>Escribí tu correo electrónico y tu contraseña. Si no tenés, pedísela a un administrador.</p>
     </div>
     <form class="panel" id="f-login" autocomplete="on">
-      <div><label for="l-user">Usuario</label><input type="text" id="l-user" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required></div>
+      <div><label for="l-user">Correo electrónico</label><input type="text" inputmode="email" id="l-user" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="nombre@correo.com" required></div>
       <div><label for="l-pass">Contraseña</label><input type="password" id="l-pass" autocomplete="current-password" maxlength="40" required></div>
-      <p class="hint">Si tu perfil ya existía, tu usuario es tu nombre y apellido (podés escribirlo con espacios) y tu contraseña es la de siempre.</p>
+      <p class="hint">Si tu perfil es anterior y todavía no tiene correo, podés entrar con tu nombre y apellido. Después pedile a un administrador que cargue tu correo.</p>
       <p class="err" id="err-login" role="alert"></p>
       <button class="btn primary" type="submit">Ingresar</button>
+      <button class="btn" type="button" id="forgot-btn" style="margin-top:10px">¿Olvidaste tu contraseña?</button>
+    </form>
+  </section>
+
+  <!-- Olvidé mi contraseña -->
+  <section class="view" id="v-olvido" hidden>
+    <div class="hero">
+      <h1>🔑 Recuperar contraseña</h1>
+      <p>Escribí el correo de tu perfil y te decimos cómo recuperarla.</p>
+    </div>
+    <form class="panel" id="f-olvido" autocomplete="off">
+      <div><label for="o-mail">Correo electrónico</label><input type="text" inputmode="email" id="o-mail" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="nombre@correo.com" required></div>
+      <p class="err" id="err-olvido" role="alert"></p>
+      <div id="olvido-res" hidden></div>
+      <button class="btn primary" type="submit">Continuar</button>
+      <button class="btn" type="button" data-go="login" style="margin-top:10px">Volver a ingresar</button>
     </form>
   </section>
 
@@ -238,9 +254,9 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
         <input type="text" id="unidad" placeholder="Ej.: 4° B, Oficina 12" required>
       </div>
       <div id="tel-wrap" hidden>
-        <label for="tel-aviso">Teléfono para avisarle (opcional)</label>
+        <label for="tel-aviso" id="tel-lbl">Teléfono para avisarle (opcional)</label>
         <input type="tel" id="tel-aviso" inputmode="tel" placeholder="11 5555 1111">
-        <p class="hint" style="margin-top:6px">Este destinatario no está en la lista de moradores. Si cargás su teléfono, podés avisarle por WhatsApp.</p>
+        <p class="hint" id="tel-hint" style="margin-top:6px"></p>
       </div>
       <p class="err" id="err-cargar" role="alert"></p>
       <button class="btn primary" type="submit">Registrar ingreso</button>
@@ -260,10 +276,10 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     </div>
   </section>
 
-  <!-- Mis paquetes -->
+  <!-- Paquetes -->
   <section class="view" id="v-paquetes" hidden>
     <button class="back" data-go="home">← Inicio</button>
-    <h2>Mis paquetes</h2>
+    <h2>Paquetes</h2>
     <div class="seg" role="tablist">
       <button role="tab" id="s-pend" data-seg="pend" aria-selected="true">Pendientes</button>
       <button role="tab" id="s-hist" data-seg="hist" aria-selected="false">Entregados</button>
@@ -279,7 +295,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
 
   <!-- Entregar -->
   <section class="view" id="v-entregar" hidden>
-    <button class="back" data-go="paquetes">← Mis paquetes</button>
+    <button class="back" data-go="paquetes">← Paquetes</button>
     <form class="panel" id="f-entregar" autocomplete="off">
       <h2>Entrega</h2>
       <div id="resumen"></div>
@@ -304,18 +320,9 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
   <!-- Moradores -->
   <section class="view" id="v-moradores" hidden>
     <button class="back" data-go="home">← Inicio</button>
-    <h2>Mis moradores</h2>
+    <h2>Moradores</h2>
 
-    <div class="panel admin-only" id="p-serv">
-      <span class="lbl" style="margin:0" id="serv-count">Servicios</span>
-      <p class="hint">Cargá primero los servicios (edificios, barrios o puestos). Después se eligen de un desplegable al agregar cada morador.</p>
-      <form class="row" id="f-serv" autocomplete="off" style="align-items:flex-end">
-        <div><label for="s-nombre">Nuevo servicio</label><input type="text" id="s-nombre" maxlength="80" placeholder="Ej.: Torre Norte" required></div>
-        <button class="btn primary" type="submit" style="flex:0 0 auto">Agregar</button>
-      </form>
-      <p class="err" id="err-serv" role="alert"></p>
-      <div id="serv-lista"></div>
-    </div>
+    <p class="hint admin-only" id="serv-link">Los servicios se cargan en la sección <b>Servicios</b>. <a href="#" data-go="servicios">Ir a Servicios</a></p>
 
     <form class="panel admin-only" id="f-mor" autocomplete="off">
       <div class="sheet-head"><span class="lbl" style="margin:0" id="mor-form-title">Agregar morador</span><button type="button" class="btn small" id="mor-cancel" hidden>Cancelar</button></div>
@@ -358,6 +365,23 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     </div>
   </section>
 
+  <!-- Servicios (administrador) -->
+  <section class="view" id="v-servicios" hidden>
+    <button class="back" data-go="home">← Inicio</button>
+    <h2>Servicios</h2>
+    <div class="panel" id="p-serv">
+      <span class="lbl" style="margin:0" id="serv-count">Servicios</span>
+      <p class="hint">Cargá acá todos los servicios (edificios, barrios o puestos). Después, en Moradores, se elige uno solo de un desplegable para cada morador.</p>
+      <form class="row" id="f-serv" autocomplete="off" style="align-items:flex-end">
+        <div><label for="s-nombre">Nuevo servicio</label><input type="text" id="s-nombre" maxlength="80" placeholder="Ej.: Torre Norte" required></div>
+        <button class="btn primary" type="submit" style="flex:0 0 auto">Agregar</button>
+      </form>
+      <p class="err" id="err-serv" role="alert"></p>
+      <div id="serv-lista"></div>
+    </div>
+
+  </section>
+
   <!-- Usuarios (administrador) -->
   <section class="view" id="v-usuarios" hidden>
     <button class="back" data-go="home">← Inicio</button>
@@ -366,7 +390,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
       <div class="sheet-head"><span class="lbl" style="margin:0" id="user-form-title">Nuevo perfil</span><button type="button" class="btn small" id="user-cancel" hidden>Cancelar</button></div>
       <div class="row">
         <div><label for="u-nombre">Nombre y apellido</label><input type="text" id="u-nombre" required></div>
-        <div><label for="u-usuario">Usuario</label><input type="text" id="u-usuario" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="ej.: jperez" required></div>
+        <div><label for="u-usuario">Correo electrónico</label><input type="text" inputmode="email" id="u-usuario" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="nombre@correo.com" maxlength="80" required></div>
       </div>
       <div class="row">
         <div>
@@ -375,7 +399,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
         </div>
         <div><label for="u-pin" id="u-pin-lbl">Contraseña (mínimo 6 caracteres)</label><input type="password" id="u-pin" maxlength="40" autocomplete="new-password"></div>
       </div>
-      <p class="hint">El usuario va en minúsculas y sin espacios. Los vigiladores cargan y entregan paquetes. Los administradores además manejan moradores, usuarios y ajustes.</p>
+      <p class="hint">El correo se usa para ingresar. Los vigiladores cargan y entregan paquetes. Los administradores además manejan moradores, servicios, usuarios y ajustes.</p>
       <p class="err" id="err-user" role="alert"></p>
       <button class="btn primary" type="submit">Guardar perfil</button>
     </form>
@@ -496,7 +520,8 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
   function rolName(r){return r==='admin'?'Administrador':'Vigilador'}
   function firstName(n){return String(n||'').trim().split(/\s+/)[0]||''}
   function validPass(p){return typeof p==='string'&&p.length>=6&&p.length<=40}
-  function validUser(u){return /^[a-z0-9._-]{3,30}$/.test(u)}
+  function validEmail(u){return u.length<=80&&/^[a-z0-9._%+-]+@[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(u)}
+  function validUser(u){return validEmail(u)||/^[a-z0-9._-]{3,30}$/.test(u)}
   function slugUser(n){var t=norm(n).replace(/[^a-z0-9]+/g,'.').replace(/^\.+|\.+$/g,'').slice(0,30); return t.length>=3?t:(t+'.usr').slice(0,30)}
   function ensureUsuarios(list){
     var taken={}, changed=[];
@@ -559,11 +584,11 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
   }
 
   /* ---------- Navegación ---------- */
-  var views=['login','home','cargar','listo','paquetes','entregar','moradores','usuarios','cuenta','ajustes'];
+  var views=['login','olvido','home','cargar','listo','paquetes','entregar','moradores','servicios','usuarios','cuenta','ajustes'];
   function go(v){
-    if(!session&&v!=='login')v='login';
+    if(!session&&v!=='login'&&v!=='olvido')v='login';
     if(session&&v==='login')v='home';
-    if((v==='usuarios'||v==='ajustes')&&!isAdmin())v='home';
+    if((v==='usuarios'||v==='ajustes'||v==='servicios')&&!isAdmin())v='home';
     if(v==='listo'&&!lastPkg)v='home';
     views.forEach(function(x){$('#v-'+x).hidden=(x!==v)});
     closeMenu();
@@ -573,7 +598,9 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     if(v==='cuenta')renderCuenta();
     if(v==='ajustes')fillAjustes();
     if(v==='usuarios')renderUsers();
+    if(v==='servicios')renderServ();
     if(v==='login')renderLogin();
+    if(v==='olvido'){$('#o-mail').value=$('#l-user')?$('#l-user').value.trim():''; $('#err-olvido').textContent=''; $('#olvido-res').hidden=true; $('#olvido-res').innerHTML=''}
     window.scrollTo(0,0);
   }
   document.addEventListener('click',function(e){
@@ -590,8 +617,8 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
   document.addEventListener('keydown',function(e){if(e.key==='Escape')closeMenu()});
 
   function renderMenu(){
-    var it=[['home','🏠','Inicio'],['cargar','📦','Cargar paquete'],['paquetes','📋','Mis paquetes'],['moradores','👥','Mis moradores']];
-    if(isAdmin())it.push(['usuarios','🛡️','Usuarios']);
+    var it=[['home','🏠','Inicio'],['cargar','📦','Cargar paquete'],['paquetes','📋','Paquetes'],['moradores','👥','Moradores']];
+    if(isAdmin())it.push(['servicios','🏢','Servicios'],['usuarios','🛡️','Usuarios']);
     it.push(['cuenta','👤','Mi cuenta']);
     if(isAdmin())it.push(['ajustes','⚙️','Ajustes']);
     $('#menu-items').innerHTML=it.map(function(x){
@@ -613,7 +640,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     document.body.setAttribute('data-auth','0'); document.body.removeAttribute('data-role');
     $('#chips').innerHTML='';
     ['#f-pin','#f-login','#f-cargar','#f-entregar'].forEach(function(s){try{$(s).reset()}catch(e){}});
-    photo=''; $('#drop').innerHTML=dropDefault; $('#sugg').innerHTML=''; $('#tel-wrap').hidden=true;
+    photo=''; $('#drop').innerHTML=dropDefault; $('#sugg').innerHTML=''; $('#tel-aviso').readOnly=false; $('#tel-wrap').hidden=true;
     closeMenu(); go('login');
     if(msg)toast(msg);
   }
@@ -633,9 +660,22 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
       else{
         var n=(parseInt(lsGet('paq_fails'),10)||0)+1; $('#l-pass').value='';
         if(n>=5){lsSet('paq_fails','0'); lsSet('paq_lock',String(Date.now()+30000)); err.textContent='Demasiados intentos. Esperá 30 segundos.'}
-        else{lsSet('paq_fails',String(n)); err.textContent='Usuario o contraseña incorrectos.'}
+        else{lsSet('paq_fails',String(n)); err.textContent='Correo o contraseña incorrectos.'}
       }
     });
+  });
+
+  $('#forgot-btn').addEventListener('click',function(){go('olvido')});
+  $('#f-olvido').addEventListener('submit',function(e){
+    e.preventDefault();
+    var mail=$('#o-mail').value.trim().toLowerCase(), err=$('#err-olvido'), box=$('#olvido-res');
+    if(!validEmail(mail)){err.textContent='Escribí un correo válido, por ejemplo nombre@correo.com.';box.hidden=true;return}
+    err.textContent='';
+    box.hidden=false;
+    box.innerHTML='<div class="preview"><b>Esta app guarda los datos en cada celular y no puede enviar correos.</b><ul>'+
+      '<li>Pedile a un administrador que te cree una contraseña nueva: en <b>Usuarios</b> toca <b>Editar</b> en tu perfil y escribe la nueva contraseña.</li>'+
+      '<li>Después ingresá con <b>'+esc(mail)+'</b> y esa contraseña. Podés cambiarla en <b>Mi cuenta</b>.</li>'+
+      '<li>Si sos el único administrador y la olvidaste, usá el respaldo de configuración de otro celular o pedí ayuda a quien instaló la app.</li></ul></div>';
   });
 
   /* ---------- Ajustes ---------- */
@@ -666,9 +706,10 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     $('#hero-title').textContent='👋 Hola, '+firstName(session.nombre);
     var t=[
       {g:'cargar',c:'c1',e:'📦',t:'Cargar Paquete',s:'Foto y destinatario'},
-      {g:'paquetes',c:'c2',e:'📋',t:'Mis Paquetes',s:np?(np===1?'1 pendiente':np+' pendientes'):'Sin pendientes',d:np},
-      {g:'moradores',c:'c3',e:'👥',t:'Mis Moradores',s:residents.length?(residents.length+' cargados'):(isAdmin()?'Cargá la lista':'Lista vacía')}
+      {g:'paquetes',c:'c2',e:'📋',t:'Paquetes',s:np?(np===1?'1 pendiente':np+' pendientes'):'Sin pendientes',d:np},
+      {g:'moradores',c:'c3',e:'👥',t:'Moradores',s:residents.length?(residents.length+' cargados'):(isAdmin()?'Cargá la lista':'Lista vacía')}
     ];
+    if(isAdmin())t.push({g:'servicios',c:'c1',e:'🏢',t:'Servicios',s:servs.length?(servs.length+(servs.length===1?' cargado':' cargados')):'Cargá los servicios'});
     if(isAdmin())t.push({g:'usuarios',c:'c5',e:'🛡️',t:'Usuarios',s:users.filter(function(u){return u.activo}).length+' activos'});
     t.push({g:'cuenta',c:'c4',e:'👤',t:'Mi Cuenta',s:'Perfil y contraseña'});
     if(isAdmin())t.push({g:'ajustes',c:'c6',e:'⚙️',t:'Ajustes',s:'Edificio y respaldo'});
@@ -712,14 +753,25 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
   $('#sugg').addEventListener('click',function(e){
     var b=e.target.closest('[data-pick]'); if(!b)return;
     var r=residents.find(function(x){return x.id===b.dataset.pick}); if(!r)return;
-    $('#dest').value=r.nombre; $('#unidad').value=r.unidad; $('#tel-aviso').value=r.telefono||''; $('#sugg').innerHTML=''; updateTelWrap();
+    $('#dest').value=r.nombre; $('#unidad').value=r.unidad; $('#sugg').innerHTML=''; updateTelWrap();
   });
   function residentFor(dest,unidad){
     return residents.find(function(r){return norm(r.nombre)===norm(dest)&&norm(r.unidad)===norm(unidad)})||null;
   }
   function updateTelWrap(){
     var d=$('#dest').value.trim(), u=$('#unidad').value.trim();
-    $('#tel-wrap').hidden=!(d&&u&&!residentFor(d,u));
+    var r=(d&&u)?residentFor(d,u):null, inp=$('#tel-aviso');
+    $('#tel-wrap').hidden=!(d&&u);
+    if(r){
+      inp.value=r.telefono||''; inp.readOnly=true; inp.setAttribute('aria-readonly','true');
+      $('#tel-lbl').textContent='Teléfono del propietario';
+      $('#tel-hint').textContent=validPhone(r.telefono)?'Se completa solo con el teléfono cargado en Moradores y no se puede editar. Un administrador puede cambiarlo desde Moradores.':'Este morador no tiene un teléfono válido. Un administrador tiene que cargarlo en Moradores.';
+    }else{
+      if(inp.readOnly){inp.value=''}
+      inp.readOnly=false; inp.removeAttribute('aria-readonly');
+      $('#tel-lbl').textContent='Teléfono para avisarle (opcional)';
+      $('#tel-hint').textContent='Este destinatario no está en la lista de moradores. Si cargás su teléfono, podés avisarle por WhatsApp.';
+    }
   }
   $('#dest').addEventListener('input',updateTelWrap);
   $('#unidad').addEventListener('input',updateTelWrap);
@@ -735,12 +787,12 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
             moradorId:mor?mor.id:'', tel_aviso:(!mor&&tel)?tel:''};
     items.push(it); lastPkg=it;
     sPut('paquetes',it).then(function(){
-      $('#f-cargar').reset(); photo=''; $('#drop').innerHTML=dropDefault; $('#sugg').innerHTML=''; $('#tel-wrap').hidden=true;
+      $('#f-cargar').reset(); photo=''; $('#drop').innerHTML=dropDefault; $('#sugg').innerHTML=''; $('#tel-aviso').readOnly=false; $('#tel-wrap').hidden=true;
       renderPaquetes(); go('listo');
     });
   });
 
-  /* ---------- Mis paquetes ---------- */
+  /* ---------- Paquetes ---------- */
   function thumb(it){return it.foto?'<img class="thumb" alt="Foto del paquete" src="'+it.foto+'">':'<div class="thumb empty">Sin foto</div>'}
   function setSeg(s){
     $('#s-pend').setAttribute('aria-selected',String(s==='pend')); $('#s-hist').setAttribute('aria-selected',String(s==='hist'));
@@ -802,7 +854,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
         '<p class="hint">Se abre WhatsApp con el mensaje ya escrito. Solo tenés que tocar enviar.'+(it.avisado?' Aviso abierto '+esc(fmt(it.avisado))+'.':'')+'</p>'+
         '<button class="btn" type="button" data-copymsg>Copiar mensaje</button><div id="listo-fallback"></div>';
     }else{
-      h='<div class="empty-state"><strong>No hay teléfono para avisar</strong>'+esc(it.destinatario)+' no tiene un teléfono cargado. Un administrador puede agregarlo en Mis moradores.</div>';
+      h='<div class="empty-state"><strong>No hay teléfono para avisar</strong>'+esc(it.destinatario)+' no tiene un teléfono cargado. Un administrador puede agregarlo en Moradores.</div>';
     }
     $('#listo-body').innerHTML=h;
   }
@@ -904,7 +956,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     if(servs.some(function(x){return norm(x.nombre)===norm(n)})){err.textContent='Ese servicio ya está cargado.';return}
     err.textContent='';
     var o={id:uid(),nombre:n}; servs.push(o);
-    sPut('servicios',o).then(function(){$('#s-nombre').value=''; renderServ(); toast('Servicio agregado')});
+    sPut('servicios',o).then(function(){$('#s-nombre').value=''; renderServ(); renderHome(); toast('Servicio agregado')});
   });
   $('#serv-lista').addEventListener('click',function(e){
     if(!isAdmin())return;
@@ -914,7 +966,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     if(used){toast('No se puede eliminar: tiene '+used+(used===1?' morador':' moradores')); return}
     if(servDelArmed!==sv.id){servDelArmed=sv.id; renderServ(); return}
     servDelArmed=null; servs=servs.filter(function(x){return x.id!==sv.id});
-    sDel('servicios',sv.id).then(function(){renderServ(); toast('Servicio eliminado')});
+    sDel('servicios',sv.id).then(function(){renderServ(); renderHome(); toast('Servicio eliminado')});
   });
   function ensureServs(names){
     var add=[];
@@ -1088,12 +1140,13 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     return !(newRol==='admin'&&newActivo)&&others===0;
   }
   function renderUsers(){
+    if(!isAdmin()){go('home');return}
     var list=users.slice().sort(function(a,b){return a.rol===b.rol?byName(a,b):(a.rol==='admin'?-1:1)});
     $('#user-count').textContent='Perfiles · '+users.length;
     $('#user-lista').innerHTML=list.map(function(u){
       var self=session&&u.id===session.id;
       return '<div class="card"><div class="info"><div class="dest">'+esc(u.nombre)+(self?' (vos)':'')+'</div>'+
-        '<div class="meta">usuario: '+esc(u.usuario||'')+'</div>'+
+        '<div class="meta">'+(validEmail(u.usuario||'')?'correo: ':'usuario: ')+esc(u.usuario||'')+'</div>'+
         '<div class="unit"><span class="pill '+(u.rol==='admin'?'adm':'vig')+'">'+rolName(u.rol)+'</span>'+(u.activo?'':' <span class="pill off">Inactivo</span>')+'</div></div>'+
         '<div class="row"><button class="btn small" data-uedit="'+esc(u.id)+'">Editar</button>'+
         (self?'':'<button class="btn small" data-utoggle="'+esc(u.id)+'">'+(u.activo?'Desactivar':'Activar')+'</button><button class="btn small danger" data-udel="'+esc(u.id)+'">'+(delUserArmed===u.id?'Tocá de nuevo para eliminar':'Eliminar')+'</button>')+'</div></div>';
@@ -1108,9 +1161,10 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     e.preventDefault(); if(!isAdmin())return;
     var n=$('#u-nombre').value.trim(), us=$('#u-usuario').value.trim().toLowerCase(), rol=$('#u-rol').value, pass=$('#u-pin').value, err=$('#err-user');
     if(!n){err.textContent='Falta el nombre.';return}
-    if(!validUser(us)){err.textContent='El usuario va en minúsculas y sin espacios: de 3 a 30 letras, números, punto, guion o guion bajo.';return}
+    var prev=editingUser?users.find(function(x){return x.id===editingUser}):null;
+    if(!validEmail(us)&&!(prev&&prev.usuario===us&&validUser(us))){err.textContent='Escribí un correo electrónico válido, por ejemplo nombre@correo.com.';return}
     if(rol!=='admin'&&rol!=='vigilador')return;
-    if(users.some(function(x){return x.id!==editingUser&&x.usuario===us})){err.textContent='Ese usuario ya existe. Elegí otro.';return}
+    if(users.some(function(x){return x.id!==editingUser&&x.usuario===us})){err.textContent='Ese correo ya está en otro perfil.';return}
     if(editingUser){
       var u=users.find(function(x){return x.id===editingUser}); if(!u)return;
       if(lastAdminGuard(u,rol,u.activo)){err.textContent='Tiene que quedar al menos un administrador activo.';return}
@@ -1160,7 +1214,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
   function renderCuenta(){
     if(!session)return;
     $('#cuenta-info').innerHTML='<div class="kv"><b style="font-weight:700">'+esc(session.nombre)+'</b><span class="pill '+(session.rol==='admin'?'adm':'vig')+'">'+rolName(session.rol)+'</span></div>'+
-      '<p class="hint" style="margin-top:8px">Usuario: <b>'+esc(session.usuario||'')+'</b></p>';
+      '<p class="hint" style="margin-top:8px">'+(validEmail(session.usuario||'')?'Correo: ':'Usuario: ')+'<b>'+esc(session.usuario||'')+'</b></p>';
     $('#err-pin').textContent='';
   }
   $('#f-pin').addEventListener('submit',function(e){
@@ -1192,7 +1246,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     if(!o||o.app!=='secutec-paqueteria'||!Array.isArray(o.usuarios))return null;
     var us=o.usuarios.map(function(u){
       if(!u||typeof u!=='object')return null;
-      var id=str(u.id,40), nombre=str(u.nombre,80).trim(), salt=str(u.salt,64), hash=str(u.hash,80), uname=str(u.usuario,30).toLowerCase(); if(!validUser(uname))uname='';
+      var id=str(u.id,40), nombre=str(u.nombre,80).trim(), salt=str(u.salt,64), hash=str(u.hash,80), uname=str(u.usuario,80).toLowerCase(); if(!validUser(uname))uname='';
       if(!id||!nombre||!salt||!hash||(u.rol!=='admin'&&u.rol!=='vigilador'))return null;
       return{id:id,nombre:nombre,usuario:uname,rol:u.rol,activo:u.activo!==false,salt:salt,hash:hash};
     }).filter(Boolean);
