@@ -596,7 +596,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
 
 <script>
 (function(){
-  var APP_VERSION=35; /* se actualiza en cada entrega: también define el número de la caché (sw.js) y el nombre del zip */
+  var APP_VERSION=38; /* se actualiza en cada entrega: también define el número de la caché (sw.js) y el nombre del zip */
   var $=function(s){return document.querySelector(s)};
   var $$=function(s){return Array.prototype.slice.call(document.querySelectorAll(s))};
   $('#app-foot').textContent='Demo 0.'+APP_VERSION+'v';
@@ -1009,7 +1009,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
   document.addEventListener('visibilitychange',function(){if(!document.hidden)tryClean()});
   function applySettings(){
     var s=settings();
-    var chips=[]; if(s.edif)chips.push('🏢 '+s.edif); if(session)chips.push('👤 '+session.nombre+' · '+rolName(session.rol));
+    var chips=[]; if(session)chips.push('👤 '+session.nombre+' · '+rolName(session.rol));
     $('#chips').innerHTML=chips.map(function(c){return '<span class="chip">'+esc(c)+'</span>'}).join('');
   }
   function copyText(text,okMsg,holder){
