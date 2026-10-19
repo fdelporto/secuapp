@@ -474,6 +474,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
         <label for="mor-text">O pegar texto</label>
         <textarea id="mor-text" placeholder="Pérez, Juan; 1° A; 11 5555 1111&#10;Gómez, Ana; 1° B"></textarea>
       </div>
+      <button class="btn" type="button" id="mor-sample">⬇️ Descargar Excel de muestra</button>
       <button class="btn" type="button" id="mor-review">Revisar lista</button>
       <div id="mor-preview" hidden></div>
     </div>
@@ -608,7 +609,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
 </div>
 <script>
 (function(){
-  var APP_VERSION=39; /* se actualiza en cada entrega: también define el número de la caché (sw.js) y el nombre del zip */
+  var APP_VERSION=40; /* se actualiza en cada entrega: también define el número de la caché (sw.js) y el nombre del zip */
   var $=function(s){return document.querySelector(s)};
   var $$=function(s){return Array.prototype.slice.call(document.querySelectorAll(s))};
   $('#app-foot').textContent='Demo 0.'+APP_VERSION+'v';
@@ -1675,6 +1676,27 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
       '<div class="row" style="margin-top:10px"><button type="button" class="btn primary" id="imp-add">Agregar a la lista</button><button type="button" class="btn" id="imp-rep">Reemplazar la lista</button></div>';
   }
   $('#mor-review').addEventListener('click',function(){if(!isAdmin())return; showPreview(rowsToResidents(textToRows($('#mor-text').value)))});
+  /* Excel de muestra para la carga masiva */
+  $('#mor-sample').addEventListener('click',function(){
+    var head=['Nombre','Unidad','Teléfono','Servicio'];
+    var ej=[['Pérez Juan','1° A','11 5555 0001','Consorcio Torre Norte'],['Gómez Ana','1° B','11 5555 0002','Consorcio Torre Norte'],['López María','2° A','11 5555 0003','Consorcio Torre Norte'],['Rodríguez Carlos','PB 1','11 5555 0004','Consorcio Torre Sur']];
+    if(!window.XLSX){
+      var csv=[head].concat(ej).map(function(r){return r.join(',')}).join('\n');
+      var a=document.createElement('a'); a.href=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv'})); a.download='muestra-moradores.csv'; document.body.appendChild(a); a.click(); a.remove(); return;
+    }
+    var ws=XLSX.utils.aoa_to_sheet([head].concat(ej)); ws['!cols']=[{wch:26},{wch:10},{wch:18},{wch:28}];
+    var info=[['Cómo cargar la lista de moradores'],[''],
+      ['1. En la hoja "Moradores" borrá las filas de ejemplo y completá una fila por morador.'],
+      ['2. Nombre: obligatorio.'],
+      ['3. Unidad: piso y departamento, por ejemplo 4° B.'],
+      ['4. Teléfono: obligatorio, es el del propietario (para el aviso por WhatsApp). Con característica y sin el 15, por ejemplo 11 5555 1111. Las filas sin teléfono válido no se importan.'],
+      ['5. Servicio: nombre del consorcio o edificio. Si no existe, se crea solo. Tiene que escribirse igual en todas las filas del mismo edificio.'],
+      ['6. No cambies los títulos de la primera fila ni el orden de las columnas.'],
+      ['7. Guardá el archivo y subilo desde "Elegir archivo" en Moradores.']];
+    var wi=XLSX.utils.aoa_to_sheet(info); wi['!cols']=[{wch:110}];
+    var wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Moradores'); XLSX.utils.book_append_sheet(wb,wi,'Instrucciones');
+    XLSX.writeFile(wb,'muestra-moradores.xlsx');
+  });
   $('#mor-file').addEventListener('change',function(e){
     if(!isAdmin())return;
     var f=e.target.files&&e.target.files[0]; if(!f)return;
