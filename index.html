@@ -437,13 +437,6 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
 
     <p class="hint admin-only" id="serv-link">Los servicios se cargan en la sección <b>Servicios</b>. <a href="#" data-go="servicios">Ir a Servicios</a></p>
 
-    <form class="panel admin-only" id="f-cons" autocomplete="off">
-      <span class="lbl" style="margin:0">Nombre del consorcio</span>
-      <p class="hint">Se usa en el mensaje de WhatsApp. Los vigiladores lo ven, pero no pueden cambiarlo.</p>
-      <input type="text" id="c-cons" maxlength="60" placeholder="Ej.: Consorcio Torre Norte">
-      <button class="btn primary" type="submit">Guardar nombre</button>
-    </form>
-
     <form class="panel admin-only" id="f-mor" autocomplete="off">
       <div class="sheet-head"><span class="lbl" style="margin:0" id="mor-form-title">Agregar morador</span><button type="button" class="btn small" id="mor-cancel" hidden>Cancelar</button></div>
       <div>
@@ -455,7 +448,10 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
         <select id="m-servicio"></select>
       </div>
       <div class="row">
-        <div><label for="m-unidad">Unidad</label><input type="text" id="m-unidad" placeholder="Ej.: 4° B" required></div>
+        <div><label for="m-piso">Piso</label><input type="text" id="m-piso" maxlength="12" placeholder="Ej.: 4°"></div>
+        <div><label for="m-unidad">Departamento / Unidad</label><input type="text" id="m-unidad" maxlength="20" placeholder="Ej.: B"></div>
+      </div>
+      <div>
         <div><label for="m-tel">Teléfono del propietario (obligatorio)</label><input type="tel" id="m-tel" inputmode="tel" placeholder="11 5555 1111" required></div>
       </div>
       <p class="hint">Es obligatorio. Con este teléfono se le avisa por WhatsApp al propietario cuando llega un paquete. Con característica y sin el 15. Ejemplo: 11 5555 1111.</p>
@@ -575,6 +571,12 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
       <h2>Mi cuenta</h2>
       <div id="cuenta-info"></div>
     </div>
+    <form class="panel admin-only" id="f-cons" autocomplete="off">
+      <span class="lbl" style="margin:0">Nombre del consorcio</span>
+      <p class="hint">Se usa en el mensaje de WhatsApp. Los vigiladores lo ven, pero no pueden cambiarlo.</p>
+      <input type="text" id="c-cons" maxlength="60" placeholder="Ej.: Consorcio Torre Norte">
+      <button class="btn primary" type="submit">Guardar nombre</button>
+    </form>
     <form class="panel" id="f-pin" autocomplete="off">
       <span class="lbl" style="margin:0">Cambiar mi contraseña</span>
       <div><label for="p-actual">Contraseña actual</label><input type="password" id="p-actual" maxlength="40" autocomplete="current-password" required></div>
@@ -609,7 +611,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
 </div>
 <script>
 (function(){
-  var APP_VERSION=41; /* se actualiza en cada entrega: también define el número de la caché (sw.js) y el nombre del zip */
+  var APP_VERSION=44; /* se actualiza en cada entrega: también define el número de la caché (sw.js) y el nombre del zip */
   var $=function(s){return document.querySelector(s)};
   var $$=function(s){return Array.prototype.slice.call(document.querySelectorAll(s))};
   $('#app-foot').textContent='Demo 0.'+APP_VERSION+'v';
@@ -1585,15 +1587,15 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
   $('#mor-cancel').addEventListener('click',resetMorForm);
   $('#f-mor').addEventListener('submit',function(e){
     e.preventDefault(); if(!isAdmin())return;
-    var n=$('#m-nombre').value.trim(), u=$('#m-unidad').value.trim(), t=$('#m-tel').value.trim(), sv=$('#m-servicio').value;
+    var n=$('#m-nombre').value.trim(), piso=$('#m-piso').value.trim(), depto=$('#m-unidad').value.trim(), u=[piso,depto].filter(Boolean).join(' '), t=$('#m-tel').value.trim(), sv=$('#m-servicio').value;
     if(servs.length&&!sv){$('#err-mor').textContent='Elegí el servicio al que pertenece.';return}
-    if(!n||!u||!t){$('#err-mor').textContent='Completá nombre, unidad y el teléfono del propietario.';return}
+    if(!n||!u||!t){$('#err-mor').textContent='Completá nombre, piso o departamento y el teléfono del propietario.';return}
     if(!validPhone(t)){$('#err-mor').textContent='Ingresá un teléfono válido con característica, por ejemplo 11 5555 1111.';return}
     var dup=residents.some(function(r){return r.id!==editing&&norm(r.nombre)===norm(n)&&norm(r.unidad)===norm(u)&&norm(r.servicio||'')===norm(sv)});
     if(dup){$('#err-mor').textContent='Ese morador ya está en la lista.';return}
     var r;
-    if(editing){r=residents.find(function(x){return x.id===editing}); r.nombre=n; r.unidad=u; r.telefono=t; r.servicio=sv}
-    else{r={id:uid(),nombre:n,unidad:u,telefono:t,servicio:sv}; residents.push(r)}
+    if(editing){r=residents.find(function(x){return x.id===editing}); r.nombre=n; r.piso=piso; r.depto=depto; r.unidad=u; r.telefono=t; r.servicio=sv}
+    else{r={id:uid(),nombre:n,piso:piso,depto:depto,unidad:u,telefono:t,servicio:sv}; residents.push(r)}
     sPut('moradores',r).then(function(){var was=!!editing; resetMorForm(); renderRes(); toast(was?'Morador actualizado':'Morador agregado')});
   });
   var delArmed=null;
@@ -1602,7 +1604,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     var ed=e.target.closest('[data-edit]'), dl=e.target.closest('[data-del]');
     if(ed){
       var r=residents.find(function(x){return x.id===ed.dataset.edit}); if(!r)return;
-      editing=r.id; $('#m-nombre').value=r.nombre; $('#m-unidad').value=r.unidad; $('#m-tel').value=r.telefono||''; fillServSelect(r.servicio||'');
+      editing=r.id; $('#m-nombre').value=r.nombre; $('#m-piso').value=r.piso||''; $('#m-unidad').value=(r.piso!==undefined||r.depto!==undefined)?(r.depto||''):r.unidad; $('#m-tel').value=r.telefono||''; fillServSelect(r.servicio||'');
       $('#mor-form-title').textContent='Editar morador'; $('#mor-cancel').hidden=false; $('#f-mor').scrollIntoView({behavior:'smooth',block:'center'});
     }
     if(dl){
@@ -1769,7 +1771,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
       return '<div class="card"><div class="info"><div class="dest">'+esc(u.nombre)+(self?' (vos)':'')+'</div>'+
         '<div class="meta">correo: '+esc(u.usuario||u.id)+'</div>'+
         '<div class="unit"><span class="pill '+(u.rol==='admin'?'adm':'vig')+'">'+rolName(u.rol)+'</span>'+(u.activo?'':' <span class="pill off">Inactivo</span>')+'</div>'+(u.rol==='admin'?'':'<div class="meta">'+((u.edificios&&u.edificios.length)?'Edificios: '+esc(u.edificios.join(', ')):'<span class="pill wait">Sin edificio asignado</span>')+'</div>')+'</div>'+
-        '<div class="row"><button class="btn small" data-uedit="'+esc(u.id)+'">Editar</button>'+
+        '<div class="row"><button class="btn small" data-uedit="'+esc(u.id)+'">Editar</button>'+(u.rol==='vigilador'?'<button class="btn small" data-ureset="'+esc(u.id)+'">Restablecer contraseña</button>':'')+
         (self?'':'<button class="btn small" data-utoggle="'+esc(u.id)+'">'+(u.activo?'Desactivar':'Activar')+'</button><button class="btn small danger" data-udel="'+esc(u.id)+'">'+(delUserArmed===u.id?'Tocá de nuevo para eliminar':'Eliminar')+'</button>')+'</div></div>';
     }).join('');
   }
@@ -1834,6 +1836,15 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
   $('#user-lista').addEventListener('click',function(e){
     if(!isAdmin())return;
     var ed=e.target.closest('[data-uedit]'), tg=e.target.closest('[data-utoggle]'), dl=e.target.closest('[data-udel]');
+    var rs=e.target.closest('[data-ureset]');
+    if(rs){
+      var ru=users.find(function(x){return x.id===rs.dataset.ureset}); if(!ru||ru.rol!=='vigilador')return;
+      var mail=ru.usuario||ru.id;
+      rs.disabled=true;
+      auth.sendPasswordResetEmail(mail).then(function(){toast('Le enviamos a '+mail+' un correo para que elija una contraseña nueva')})
+        .catch(function(x){toast(authMsg(x))}).then(function(){rs.disabled=false});
+      return;
+    }
     if(dl){
       var d=users.find(function(x){return x.id===dl.dataset.udel}); if(!d||(session&&d.id===session.id))return;
       if(lastAdminGuard(d,'vigilador',false)){toast('Tiene que quedar al menos un administrador activo'); return}
