@@ -488,8 +488,9 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
       <span class="lbl" style="margin:0" id="serv-count">Servicios</span>
       <p class="hint">Cargá acá todos los servicios (edificios, barrios o puestos). Después, en Moradores, se elige uno solo de un desplegable para cada morador.</p>
       <form class="row" id="f-serv" autocomplete="off" style="align-items:flex-end">
-        <div><label for="s-nombre">Nuevo servicio</label><input type="text" id="s-nombre" maxlength="80" placeholder="Ej.: Torre Norte" required></div>
-        <button class="btn primary" type="submit" style="flex:0 0 auto">Agregar</button>
+        <div><label for="s-nombre" id="s-lbl">Nuevo servicio</label><input type="text" id="s-nombre" maxlength="80" placeholder="Ej.: Torre Norte" required></div>
+        <button class="btn primary" type="submit" id="s-save" style="flex:0 0 auto">Agregar</button>
+        <button class="btn" type="button" id="s-cancel" style="flex:0 0 auto" hidden>Cancelar</button>
       </form>
       <p class="err" id="err-serv" role="alert"></p>
       <div id="serv-lista"></div>
@@ -595,7 +596,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
 
 <script>
 (function(){
-  var APP_VERSION=34; /* se actualiza en cada entrega: también define el número de la caché (sw.js) y el nombre del zip */
+  var APP_VERSION=35; /* se actualiza en cada entrega: también define el número de la caché (sw.js) y el nombre del zip */
   var $=function(s){return document.querySelector(s)};
   var $$=function(s){return Array.prototype.slice.call(document.querySelectorAll(s))};
   $('#app-foot').textContent='Demo 0.'+APP_VERSION+'v';
@@ -1382,20 +1383,53 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     $('#serv-lista').innerHTML=servs.length?servNames().map(function(n){
       var sv=servs.find(function(x){return x.nombre===n}), c=cnt[n]||0;
       return '<div class="card"><div class="info"><div class="dest">'+esc(n)+'</div><div class="meta">'+c+(c===1?' morador':' moradores')+'</div></div>'+
-        '<div class="row"><button class="btn small danger" data-sdel="'+esc(sv.id)+'">'+(servDelArmed===sv.id?'Tocá de nuevo para eliminar':'Eliminar')+'</button></div></div>';
+        '<div class="row"><button class="btn small" data-sedit="'+esc(sv.id)+'">Editar</button><button class="btn small danger" data-sdel="'+esc(sv.id)+'">'+(servDelArmed===sv.id?'Tocá de nuevo para eliminar':'Eliminar')+'</button></div></div>';
     }).join(''):'<div class="empty-state">Todavía no hay servicios cargados.</div>';
   }
   $('#f-serv').addEventListener('submit',function(e){
     e.preventDefault(); if(!isAdmin())return;
     var n=$('#s-nombre').value.trim().replace(/\s+/g,' '), err=$('#err-serv');
     if(!n)return;
+    if(editingServ){renameServ(editingServ,n); return}
     if(servs.some(function(x){return norm(x.nombre)===norm(n)})){err.textContent='Ese servicio ya está cargado.';return}
     err.textContent='';
     var o={id:uid(),nombre:n}; servs.push(o);
     sPut('servicios',o).then(function(){$('#s-nombre').value=''; renderServ(); renderHome(); toast('Servicio agregado')});
   });
+  /* editar un servicio: el cambio de nombre se replica en moradores, paquetes y vigiladores asignados */
+  var editingServ=null;
+  function resetServForm(){editingServ=null; $('#s-nombre').value=''; $('#s-lbl').textContent='Nuevo servicio'; $('#s-save').textContent='Agregar'; $('#s-cancel').hidden=true; $('#err-serv').textContent=''}
+  $('#s-cancel').addEventListener('click',resetServForm);
+  function sUpdMany(col,ids,changes){
+    try{
+      for(var i=0;i<ids.length;i+=400){
+        var bt=db.batch(); ids.slice(i,i+400).forEach(function(id){bt.update(db.collection(col).doc(id),changes)}); bt.commit().catch(saveFail);
+      }
+    }catch(e){saveFail(e)}
+  }
+  function renameServ(id,n){
+    var sv=servs.find(function(x){return x.id===id}), err=$('#err-serv'); if(!sv){resetServForm();return}
+    var old=sv.nombre;
+    if(n===old){resetServForm(); return}
+    if(servs.some(function(x){return x.id!==id&&norm(x.nombre)===norm(n)})){err.textContent='Ya hay otro servicio con ese nombre.';return}
+    var rs=residents.filter(function(r){return r.servicio===old}), ps=items.filter(function(x){return x.servicio===old}),
+        us=users.filter(function(u){return Array.isArray(u.edificios)&&u.edificios.indexOf(old)>=0});
+    sv.nombre=n; rs.forEach(function(r){r.servicio=n}); ps.forEach(function(x){x.servicio=n});
+    sPut('servicios',sv);
+    sUpdMany('moradores',rs.map(function(r){return r.id}),{servicio:n});
+    sUpdMany('paquetes',ps.map(function(x){return x.id}),{servicio:n});
+    us.forEach(function(u){u.edificios=u.edificios.map(function(e){return e===old?n:e}); try{db.collection('usuarios').doc(u.id).update({edificios:u.edificios}).catch(saveFail)}catch(e){saveFail(e)}});
+    resetServForm(); renderServ(); renderRes(); renderPaquetes(); renderHome();
+    toast('Servicio actualizado: '+rs.length+(rs.length===1?' morador':' moradores')+', '+ps.length+(ps.length===1?' paquete':' paquetes')+(us.length?', '+us.length+(us.length===1?' vigilador':' vigiladores'):''));
+  }
   $('#serv-lista').addEventListener('click',function(e){
     if(!isAdmin())return;
+    var ed=e.target.closest('[data-sedit]');
+    if(ed){
+      var se=servs.find(function(x){return x.id===ed.dataset.sedit}); if(!se)return;
+      servDelArmed=null; editingServ=se.id; $('#s-nombre').value=se.nombre; $('#s-lbl').textContent='Editar servicio'; $('#s-save').textContent='Guardar'; $('#s-cancel').hidden=false; $('#err-serv').textContent='';
+      renderServ(); $('#f-serv').scrollIntoView({behavior:'smooth',block:'center'}); $('#s-nombre').focus(); return;
+    }
     var b=e.target.closest('[data-sdel]'); if(!b)return;
     var sv=servs.find(function(x){return x.id===b.dataset.sdel}); if(!sv)return;
     var used=residents.filter(function(r){return r.servicio===sv.nombre}).length;
