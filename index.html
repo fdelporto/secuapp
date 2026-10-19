@@ -146,6 +146,29 @@ a.btn{display:flex; align-items:center; justify-content:center; text-decoration:
 .photo-drop{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; text-align:center; border:2px dashed var(--line); border-radius:16px; background:var(--field); min-height:150px; cursor:pointer; overflow:hidden; color:var(--muted); font-weight:500}
 .photo-drop img{width:100%; max-height:260px; object-fit:cover; display:block}
 .photo-drop .e{font-size:34px}
+.photo-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:6px}
+.photo-grid .photo-drop{margin:0; text-transform:none; letter-spacing:0; font-size:15px; color:var(--muted); position:relative}
+.photo-grid .photo-drop.main{grid-column:1 / -1; font-size:16px}
+.photo-grid .photo-drop.sm{min-height:96px}
+.photo-grid .photo-drop.sm .e{font-size:26px}
+.photo-grid .photo-drop.sm img{max-height:140px}
+.drop-x{position:absolute; top:6px; right:6px; width:34px; height:34px; border-radius:50%; border:0; background:rgba(0,0,0,.65); color:#fff; font-size:16px; line-height:1; cursor:pointer; z-index:2}
+.obs-box{min-height:84px; font-family:var(--f-body); font-size:16px}
+.fld-ico{display:flex; align-items:stretch; border:1px solid var(--line); border-radius:14px; background:var(--field); overflow:hidden}
+.fld-ico .ico{flex:none; width:52px; display:grid; place-items:center; border-right:1px solid var(--line); color:var(--muted)}
+.fld-ico .ico svg{width:22px; height:22px}
+.fld-ico select:focus-visible{outline:none}
+.fld-ico:focus-within{outline:3px solid var(--accent); outline-offset:2px}
+select option{background:var(--surface); color:var(--ink)}
+.fld-ico select{border:0; border-radius:0; background:transparent; min-height:50px; padding-left:14px}
+.stepper{flex:1; display:flex; align-items:center; gap:8px; padding:6px}
+.stepper input{border:0; background:transparent; text-align:center; font-weight:500; font-size:18px; padding:8px 0; min-width:0; -moz-appearance:textfield}
+.stepper input::-webkit-outer-spin-button,.stepper input::-webkit-inner-spin-button{-webkit-appearance:none; margin:0}
+.stepper button{flex:none; width:46px; height:46px; border-radius:12px; border:0; background:var(--t1); color:var(--ink); font-size:24px; line-height:1; cursor:pointer}
+.stepper button:disabled{opacity:.4; cursor:default}
+.thumbs-row{display:flex; gap:8px; flex-wrap:wrap}
+.thumb.mini{width:56px; height:56px; border-radius:10px}
+.obs-line{font-size:14px; color:var(--ink); background:var(--t3); border-radius:10px; padding:8px 10px; overflow-wrap:anywhere; white-space:pre-wrap}
 .sugg{display:flex; flex-direction:column; gap:6px; margin-top:8px}
 .sugg button{display:flex; flex-direction:column; align-items:flex-start; text-align:left; gap:0; background:var(--t1); border:1px solid var(--line); border-radius:12px; padding:10px 14px; font-size:16px; color:var(--ink); cursor:pointer; min-height:48px}
 .sugg button span{font-size:13px; color:var(--muted)}
@@ -286,11 +309,20 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
         <select id="g-recibe"></select>
       </div>
       <div>
-        <span class="lbl">Foto del paquete</span>
-        <label class="photo-drop" for="foto" id="drop" style="margin:0; text-transform:none; letter-spacing:0; font-size:16px; color:var(--muted)">
-          <span class="e">📷</span><span>Tocar para sacar la foto (obligatoria)</span>
-        </label>
-        <input type="file" id="foto" accept="image/*" capture="environment" hidden>
+        <span class="lbl">Fotos del paquete</span>
+        <p class="hint">La primera es obligatoria. Podés sumar hasta 2 más. Al tocar elegís entre sacar la foto o buscarla en la galería.</p>
+        <div class="photo-grid">
+          <label class="photo-drop main" for="foto" id="drop"><span class="e">📷</span><span>Foto 1 (obligatoria)</span></label>
+          <label class="photo-drop sm" for="foto2" id="drop2"><span class="e">➕</span><span>Foto 2 (opcional)</span></label>
+          <label class="photo-drop sm" for="foto3" id="drop3"><span class="e">➕</span><span>Foto 3 (opcional)</span></label>
+        </div>
+        <input type="file" id="foto" accept="image/*" hidden>
+        <input type="file" id="foto2" accept="image/*" hidden>
+        <input type="file" id="foto3" accept="image/*" hidden>
+      </div>
+      <div>
+        <label for="obs">Observaciones (opcional)</label>
+        <textarea id="obs" class="obs-box" maxlength="300" placeholder="Ej.: caja golpeada, paquete frágil, sin etiqueta…"></textarea>
       </div>
       <div>
         <label for="dest">Destinatario</label>
@@ -300,6 +332,24 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
       <div>
         <label for="unidad">Unidad / oficina</label>
         <input type="text" id="unidad" placeholder="Ej.: 4° B, Oficina 12" required>
+      </div>
+      <div>
+        <label for="transp">Empresa de transporte</label>
+        <div class="fld-ico">
+          <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6h11v9H2z"/><path d="M13 9h4l3 3v3h-7"/><circle cx="6.5" cy="17" r="1.8"/><circle cx="16.5" cy="17" r="1.8"/></svg></span>
+          <select id="transp"></select>
+        </div>
+      </div>
+      <div>
+        <label for="bultos">Cantidad de bultos <span aria-hidden="true" style="color:var(--danger)">*</span></label>
+        <div class="fld-ico">
+          <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg></span>
+          <div class="stepper">
+            <button type="button" id="b-menos" aria-label="Un bulto menos">−</button>
+            <input type="number" id="bultos" inputmode="numeric" min="1" max="99" value="1" required>
+            <button type="button" id="b-mas" aria-label="Un bulto más">+</button>
+          </div>
+        </div>
       </div>
       <div id="edif-wrap" hidden>
         <label for="edif-ro" id="edif-lbl">Edificio 🔒</label>
@@ -448,6 +498,21 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
   </section>
 
   <!-- Vigiladores (administrador) -->
+  <section class="view" id="v-transportes" hidden>
+    <button class="back" data-go="home">← Inicio</button>
+    <h2>Transportes</h2>
+    <div class="panel">
+      <span class="lbl" style="margin:0" id="tr-count">Empresas de transporte</span>
+      <p class="hint">Estas son las empresas que aparecen en el desplegable al cargar un paquete. Solo un administrador puede agregarlas o quitarlas. "Otro / No identificado" siempre está disponible.</p>
+      <form class="row" id="f-tr" autocomplete="off" style="align-items:flex-end">
+        <div><label for="tr-nombre">Nueva empresa</label><input type="text" id="tr-nombre" maxlength="50" placeholder="Ej.: Via Cargo" required></div>
+        <button class="btn primary" type="submit" style="flex:0 0 auto">Agregar</button>
+      </form>
+      <p class="err" id="err-tr" role="alert"></p>
+      <div id="tr-lista"></div>
+    </div>
+  </section>
+
   <section class="view" id="v-guardias" hidden>
     <button class="back" data-go="home">← Inicio</button>
     <h2>Vigiladores</h2>
@@ -530,7 +595,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
 
 <script>
 (function(){
-  var APP_VERSION=33; /* se actualiza en cada entrega: también define el número de la caché (sw.js) y el nombre del zip */
+  var APP_VERSION=34; /* se actualiza en cada entrega: también define el número de la caché (sw.js) y el nombre del zip */
   var $=function(s){return document.querySelector(s)};
   var $$=function(s){return Array.prototype.slice.call(document.querySelectorAll(s))};
   $('#app-foot').textContent='Demo 0.'+APP_VERSION+'v';
@@ -574,7 +639,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     messagingSenderId:'691919710359',
     appId:'1:691919710359:web:3ae07576652ddc831a61d2'
   };
-  var db=null, auth=null, booted=false, loginMsg='', items=[], residents=[], servs=[], guards=[], users=[], session=null, lastPkg=null, unsubs=[];
+  var db=null, auth=null, booted=false, loginMsg='', items=[], residents=[], servs=[], guards=[], transps=[], users=[], session=null, lastPkg=null, unsubs=[];
   function initFirebase(){
     try{
       if(!window.firebase||!firebase.initializeApp)return false;
@@ -612,7 +677,8 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     clearTimeout(renderT);
     renderT=setTimeout(function(){
       if(!session)return;
-      renderPaquetes(); renderRes(); renderServ(); fillGuards(); updateEdifWrap();
+      renderPaquetes(); renderRes(); renderServ(); fillGuards(); fillTransp(); updateEdifWrap();
+      if(!$('#v-transportes').hidden)renderTransp();
       if(!$('#v-guardias').hidden)renderGuards();
       if(!$('#v-usuarios').hidden)renderUsers();
     },60);
@@ -645,6 +711,15 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     else{items=[]; residents=[]; listenBy('paquetes','servicio',myEdif(),onP); listenBy('moradores','servicio',myEdif(),onM)}
     listen('servicios',function(a){servs=a});
     listen('guardias',function(a){guards=a});
+    /* empresas de transporte: si la lista está vacía y entra un administrador, se carga la lista inicial */
+    unsubs.push(db.collection('transportes').onSnapshot(function(snap){
+      var arr=[]; snap.forEach(function(d){var o=d.data(); o.id=d.id; arr.push(o)});
+      transps=arr;
+      if(!arr.length&&isAdmin()&&!(snap.metadata&&snap.metadata.fromCache)){
+        sPutMany('transportes',TRANSP_DEFAULT.map(function(n,i){return{id:'T-'+norm(n).replace(/[^a-z0-9]+/g,''),nombre:n,orden:i+1}}));
+      }
+      scheduleRender();
+    },function(){}));
     if(isAdmin())listen('usuarios',function(a){users=a});
     /* nombre del consorcio (compartido; solo lo cambia un administrador) */
     unsubs.push(db.collection('meta').doc('consorcio').onSnapshot(function(d){
@@ -723,13 +798,13 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
   }
 
   /* ---------- Navegación ---------- */
-  var views=['login','olvido','home','cargar','listo','paquetes','entregar','moradores','servicios','guardias','usuarios','cuenta'];
+  var views=['login','olvido','home','cargar','listo','paquetes','entregar','moradores','servicios','guardias','transportes','usuarios','cuenta'];
   var curView='login', exitArmed=false, exitT=null;
   function histState(){return history.state&&history.state.app?history.state:null}
   function go(v,fromPop){
     if(!session&&v!=='login'&&v!=='olvido')v='login';
     if(session&&v==='login')v='home';
-    if((v==='usuarios'||v==='servicios'||v==='guardias')&&!isAdmin())v='home';
+    if((v==='usuarios'||v==='servicios'||v==='guardias'||v==='transportes')&&!isAdmin())v='home';
     if(v==='listo'&&!lastPkg)v='home';
     views.forEach(function(x){$('#v-'+x).hidden=(x!==v)});
     closeMenu();
@@ -740,8 +815,9 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     if(v==='usuarios'){renderUsers(); if(!editingUser)fillUserEdif([])}
     if(v==='servicios')renderServ();
     if(v==='guardias')renderGuards();
+    if(v==='transportes')renderTransp();
     if(v==='cargar'||v==='entregar')fillGuards();
-    if(v==='cargar')updateEdifWrap();
+    if(v==='cargar'){fillTransp(); updateEdifWrap()}
     if(v==='login')renderLogin();
     if(v==='olvido'){$('#o-mail').value=$('#l-user')?$('#l-user').value.trim():''; $('#err-olvido').textContent=''; $('#olvido-res').hidden=true; $('#olvido-res').innerHTML=''}
     window.scrollTo(0,0);
@@ -791,7 +867,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
 
   function renderMenu(){
     var it=[['home','🏠','Inicio'],['cargar','📦','Cargar paquete'],['paquetes','📋','Paquetes'],['moradores','👥','Moradores']];
-    if(isAdmin())it.push(['servicios','🏢','Servicios'],['guardias','👮','Vigiladores'],['usuarios','🛡️','Usuarios']);
+    if(isAdmin())it.push(['servicios','🏢','Servicios'],['guardias','👮','Vigiladores'],['transportes','🚚','Transportes'],['usuarios','🛡️','Usuarios']);
     it.push(['cuenta','👤','Mi cuenta']);
     $('#menu-items').innerHTML=it.map(function(x){
       return '<button class="nav-item" data-go="'+x[0]+'"><span class="e">'+x[1]+'</span>'+x[2]+'</button>';
@@ -811,11 +887,11 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
   }
   function logout(msg){
     stopListeners();
-    session=null; current=null; lastPkg=null; items=[]; residents=[]; servs=[]; guards=[]; users=[];
+    session=null; current=null; lastPkg=null; items=[]; residents=[]; servs=[]; guards=[]; transps=[]; users=[];
     document.body.setAttribute('data-auth','0'); document.body.removeAttribute('data-role');
     $('#chips').innerHTML='';
     ['#f-pin','#f-login','#f-cargar','#f-entregar'].forEach(function(s){try{$(s).reset()}catch(e){}});
-    photo=''; $('#drop').innerHTML=dropDefault; $('#sugg').innerHTML=''; $('#tel-aviso').readOnly=false; $('#tel-wrap').hidden=true;
+    resetPhotos(); $('#sugg').innerHTML=''; $('#tel-aviso').readOnly=false; $('#tel-wrap').hidden=true;
     closeMenu();
     loginMsg=msg||'';
     try{if(auth&&auth.currentUser)auth.signOut()}catch(e){}
@@ -962,6 +1038,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     ];
     if(isAdmin())t.push({g:'servicios',c:'c1',e:'🏢',t:'Servicios',s:servs.length?(servs.length+(servs.length===1?' cargado':' cargados')):'Cargá los servicios'});
     if(isAdmin())t.push({g:'guardias',c:'c4',e:'👮',t:'Vigiladores',s:guards.length?(guards.length+(guards.length===1?' cargado':' cargados')):'Cargá los nombres'});
+    if(isAdmin())t.push({g:'transportes',c:'c5',e:'🚚',t:'Transportes',s:(transpNames().length-1)+' empresas'});
     if(isAdmin())t.push({g:'usuarios',c:'c5',e:'🛡️',t:'Usuarios',s:users.filter(function(u){return u.activo}).length+' activos'});
     t.push({g:'cuenta',c:'c4',e:'👤',t:'Mi Cuenta',s:'Perfil y contraseña'});
     $('#tiles').innerHTML=t.map(function(x){
@@ -970,27 +1047,41 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
   }
 
   /* ---------- Cargar paquete ---------- */
-  var photo='', dropDefault=$('#drop').innerHTML;
-  function compress(file){
+  var photos=['','',''], dropDefaults=[$('#drop').innerHTML,$('#drop2').innerHTML,$('#drop3').innerHTML];
+  function drawDrop(i){
+    var el=$(i?'#drop'+(i+1):'#drop');
+    el.innerHTML=photos[i]?('<img alt="Foto '+(i+1)+' del paquete" src="'+photos[i]+'">'+(i?'<button type="button" class="drop-x" data-rmfoto="'+i+'" aria-label="Quitar la foto '+(i+1)+'">✕</button>':'')):dropDefaults[i];
+  }
+  function resetPhotos(){photos=['','','']; [0,1,2].forEach(drawDrop); $('#obs').value=''}
+  function compress(file,maxPx,q){
     return new Promise(function(res,rej){
       var fr=new FileReader(); fr.onerror=rej;
       fr.onload=function(){
         var img=new Image(); img.onerror=rej;
         img.onload=function(){
-          var s=Math.min(1,900/Math.max(img.width,img.height)), c=document.createElement('canvas');
+          var s=Math.min(1,(maxPx||900)/Math.max(img.width,img.height)), c=document.createElement('canvas');
           c.width=Math.round(img.width*s); c.height=Math.round(img.height*s);
           c.getContext('2d').drawImage(img,0,0,c.width,c.height);
-          res(c.toDataURL('image/jpeg',0.72));
+          res(c.toDataURL('image/jpeg',q||0.72));
         };
         img.src=fr.result;
       };
       fr.readAsDataURL(file);
     });
   }
-  $('#foto').addEventListener('change',function(e){
-    var f=e.target.files&&e.target.files[0]; if(!f)return;
-    compress(f).then(function(url){photo=url; $('#drop').innerHTML='<img alt="Foto del paquete" src="'+url+'">'})
-      .catch(function(){toast('No se pudo leer la foto. Probá de nuevo.')});
+  ['#foto','#foto2','#foto3'].forEach(function(sel,i){
+    $(sel).addEventListener('change',function(e){
+      var f=e.target.files&&e.target.files[0]; if(!f)return;
+      compress(f,i?800:900,i?0.65:0.72).then(function(url){photos[i]=url; drawDrop(i)})
+        .catch(function(){toast('No se pudo leer la foto. Probá de nuevo.')});
+      e.target.value='';
+    });
+  });
+  /* quitar una foto opcional (la 1 solo se reemplaza) */
+  $('#f-cargar').addEventListener('click',function(e){
+    var x=e.target.closest('[data-rmfoto]'); if(!x)return;
+    e.preventDefault(); e.stopPropagation();
+    var i=+x.dataset.rmfoto; photos[i]=''; drawDrop(i);
   });
   function matches(qq,limit){
     var toks=norm(qq).split(/\s+/).filter(Boolean);
@@ -1023,8 +1114,9 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     var sel=$('#f-edif'), ro=$('#edif-ro'), hint=$('#edif-hint');
     w.hidden=false;
     if(!e.length){sel.hidden=true; ro.hidden=false; ro.value='Sin edificio asignado'; hint.textContent='Pedile a un administrador que te asigne un edificio.'; return}
-    if(r&&r.servicio){sel.hidden=true; ro.hidden=false; ro.value=r.servicio; hint.textContent='Sale del morador elegido.'; return}
-    if(e.length===1){sel.hidden=true; ro.hidden=false; ro.value=e[0]; hint.textContent=''; return}
+    /* el edificio se completa solo (del morador o del único edificio del vigilador): no hace falta mostrarlo */
+    if(r&&r.servicio){w.hidden=true; sel.hidden=true; return}
+    if(e.length===1){w.hidden=true; sel.hidden=true; return}
     var cur=sel.value;
     sel.innerHTML='<option value="">— Elegí el edificio —</option>'+e.map(function(n){return '<option value="'+esc(n)+'">'+esc(n)+'</option>'}).join('');
     sel.value=e.indexOf(cur)>=0?cur:'';
@@ -1046,15 +1138,22 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
       $('#tel-hint').textContent='Este destinatario no está en la lista de moradores. Si cargás su teléfono, podés avisarle por WhatsApp.';
     }
   }
+  function setBultos(n){n=Math.max(1,Math.min(99,parseInt(n,10)||1)); $('#bultos').value=n; $('#b-menos').disabled=n<=1; $('#b-mas').disabled=n>=99}
+  $('#b-menos').addEventListener('click',function(){setBultos((parseInt($('#bultos').value,10)||1)-1)});
+  $('#b-mas').addEventListener('click',function(){setBultos((parseInt($('#bultos').value,10)||1)+1)});
+  $('#bultos').addEventListener('change',function(){setBultos($('#bultos').value)});
+  setBultos(1);
   $('#dest').addEventListener('input',updateTelWrap);
   $('#unidad').addEventListener('input',updateTelWrap);
   $('#f-cargar').addEventListener('submit',function(e){
     e.preventDefault(); if(!session)return;
     var dest=$('#dest').value.trim(), unidad=$('#unidad').value.trim(), err=$('#err-cargar');
-    if(!photo){err.textContent='La foto del paquete es obligatoria. Tocá el recuadro para sacarla.';$('#drop').scrollIntoView({block:'center'});return}
+    if(!photos[0]){err.textContent='La foto del paquete es obligatoria. Tocá el recuadro para sacarla.';$('#drop').scrollIntoView({block:'center'});return}
     if(!dest||!unidad){err.textContent='Completá destinatario y unidad.';return}
     var mor=residentFor(dest,unidad), tel=$('#tel-aviso').value.trim();
     if(!mor&&tel&&!validPhone(tel)){err.textContent='Revisá el teléfono: ingresalo con característica, por ejemplo 11 5555 1111.';return}
+    var bultos=parseInt($('#bultos').value,10);
+    if(!(bultos>=1&&bultos<=99)){err.textContent='Indicá la cantidad de bultos (de 1 a 99).';return}
     var ed=edifForNew(mor);
     if(!isAdmin()&&!myEdif().length){err.textContent='No tenés un edificio asignado. Pedile a un administrador que te asigne uno.';return}
     if(!isAdmin()&&!ed){err.textContent='Elegí el edificio al que pertenece el paquete.';return}
@@ -1064,13 +1163,13 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     err.textContent='';
     var btnC=$('#f-cargar button[type=submit]'); btnC.disabled=true;
     nextNumber().then(function(nn){
-      var it={id:nn.id,n:nn.n,ingreso:new Date().toISOString(),vigilador:recibe,registro_por:session.nombre,destinatario:dest,unidad:unidad,foto:photo,estado:'pendiente',
+      var it={id:nn.id,n:nn.n,ingreso:new Date().toISOString(),vigilador:recibe,registro_por:session.nombre,destinatario:dest,unidad:unidad,foto:photos[0],foto2:photos[1],foto3:photos[2],transporte:(transpNames().indexOf($('#transp').value)>=0?$('#transp').value:TRANSP_OTRO),bultos:bultos,observaciones:$('#obs').value.trim().slice(0,300),estado:'pendiente',
               moradorId:mor?mor.id:'', servicio:ed, tel_aviso:(!mor&&tel)?tel:''};
       items.push(it); lastPkg=it;
       return sPut('paquetes',it);
     }).then(function(){
       btnC.disabled=false;
-      $('#f-cargar').reset(); fillGuards(); photo=''; $('#drop').innerHTML=dropDefault; $('#sugg').innerHTML=''; $('#tel-aviso').readOnly=false; $('#tel-wrap').hidden=true;
+      $('#f-cargar').reset(); fillGuards(); resetPhotos(); setBultos(1); $('#sugg').innerHTML=''; $('#tel-aviso').readOnly=false; $('#tel-wrap').hidden=true;
       renderPaquetes(); go('listo');
     });
   });
@@ -1093,6 +1192,16 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
   }
 
   /* ---------- Paquetes ---------- */
+  function extras(it){
+    var h='', fs=[it.foto2,it.foto3].map(function(f,i){return f?'<img class="thumb mini" data-fn="'+(i+2)+'" alt="Foto '+(i+2)+' del paquete: tocá para ampliar" src="'+f+'">':''}).join('');
+    if(fs)h+='<div class="thumbs-row">'+fs+'</div>';
+    if(it.observaciones)h+='<div class="obs-line">📝 '+esc(it.observaciones)+'</div>';
+    return h;
+  }
+  function envio(it){
+    var t=it.transporte, b=it.bultos; if(!t&&!b)return '';
+    return '<div class="meta">🚚 '+esc(t||'Sin dato')+(b?' · '+b+(b===1?' bulto':' bultos'):'')+'</div>';
+  }
   function thumb(it){return it.foto?'<img class="thumb" alt="Foto del paquete: tocá para ampliar" src="'+it.foto+'">':'<div class="thumb empty">Sin foto</div>'}
   function setSeg(s){
     $('#s-pend').setAttribute('aria-selected',String(s==='pend')); $('#s-hist').setAttribute('aria-selected',String(s==='hist'));
@@ -1108,19 +1217,19 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     $('#lista-pend').innerHTML=shown.length?shown.map(function(it){
       return '<div class="card"><div class="card-top">'+thumb(it)+'<div class="info">'+
         '<div class="code">'+esc(it.id)+' · <span class="pill wait">Pendiente</span></div>'+
-        '<div class="dest">'+esc(it.destinatario)+'</div><div class="unit">'+svPill(it)+esc(it.unidad)+'</div>'+
+        '<div class="dest">'+esc(it.destinatario)+'</div><div class="unit">'+svPill(it)+esc(it.unidad)+'</div>'+envio(it)+
         '<div class="meta">Ingresó '+esc(fmt(it.ingreso))+(it.vigilador?' · '+esc(it.vigilador):'')+'</div>'+
-        '<div class="meta">'+(it.avisado?'Aviso abierto '+esc(fmt(it.avisado)):'Sin avisar')+'</div></div></div>'+
+        '<div class="meta">'+(it.avisado?'Aviso abierto '+esc(fmt(it.avisado)):'Sin avisar')+'</div></div></div>'+extras(it)+
         '<div class="row">'+avisoBtn(it)+'<button class="btn primary" data-entregar="'+esc(it.id)+'">Entregar</button></div>'+edifSel(it)+delBtn(it)+'</div>';
     }).join(''):(pend.length?'<div class="empty-state">Ningún paquete coincide con la búsqueda.</div>':
       '<div class="empty-state"><strong>No hay paquetes pendientes</strong>Los paquetes que cargues aparecen acá hasta que alguien los retire.</div>');
     $('#lista-hist').innerHTML=done.length?done.map(function(it){
       return '<div class="card"><div class="card-top">'+thumb(it)+'<div class="info">'+
         '<div class="code">'+esc(it.id)+' · <span class="pill done">Entregado</span>'+(isAdmin()&&diasRestantes(it)!==null&&diasRestantes(it)<=DIAS_AVISO?' <span class="pill wait">'+(diasRestantes(it)<=0?'Se borra hoy':'Se borra en '+diasRestantes(it)+(diasRestantes(it)===1?' día':' días'))+'</span>':'')+'</div>'+
-        '<div class="dest">'+esc(it.destinatario)+'</div><div class="unit">'+svPill(it)+esc(it.unidad)+'</div>'+
-        '<div class="meta">Retiró '+esc(it.retira_nombre)+' · '+esc(fmt(it.entrega))+'</div></div></div>'+
+        '<div class="dest">'+esc(it.destinatario)+'</div><div class="unit">'+svPill(it)+esc(it.unidad)+'</div>'+envio(it)+
+        '<div class="meta">Retiró '+esc(it.retira_nombre)+' · '+esc(fmt(it.entrega))+'</div></div></div>'+extras(it)+
         '<details class="det"><summary>Ver constancia</summary><div class="det-body"><dl>'+
-        '<dt>Ingreso</dt><dd>'+esc(fmt(it.ingreso))+'</dd><dt>Recibió</dt><dd>'+esc(it.vigilador||'Sin dato')+'</dd>'+
+        '<dt>Transporte</dt><dd>'+esc(it.transporte||'Sin dato')+'</dd><dt>Bultos</dt><dd>'+esc(it.bultos||'Sin dato')+'</dd><dt>Ingreso</dt><dd>'+esc(fmt(it.ingreso))+'</dd><dt>Recibió</dt><dd>'+esc(it.vigilador||'Sin dato')+'</dd>'+
         '<dt>Entrega</dt><dd>'+esc(fmt(it.entrega))+'</dd><dt>Entregó</dt><dd>'+esc(it.entrego_por||'Sin dato')+'</dd>'+
         '<dt>Aviso</dt><dd>'+(it.avisado?'Abierto '+esc(fmt(it.avisado))+(it.avisado_por?' · '+esc(it.avisado_por):''):'No se avisó')+'</dd>'+
         '<dt>Retiró</dt><dd>'+esc(it.retira_nombre)+'</dd>'+
@@ -1297,6 +1406,46 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
   });
   /* ---------- Vigiladores del servicio (los carga el administrador) ---------- */
   var guardDelArmed=null;
+  /* ---------- Empresas de transporte (las carga el administrador) ---------- */
+  var TRANSP_DEFAULT=['Mercado Libre','Andreani','Correo Argentino','OCA'], TRANSP_OTRO='Otro / No identificado', trDelArmed=null;
+  function transpNames(){
+    var n=transps.slice().sort(function(a,b){return (a.orden||0)-(b.orden||0)||String(a.nombre).localeCompare(String(b.nombre),'es')}).map(function(x){return x.nombre}).filter(function(x){return x&&x!==TRANSP_OTRO});
+    if(!n.length)n=TRANSP_DEFAULT.slice();
+    return n.concat([TRANSP_OTRO]);
+  }
+  function fillTransp(){
+    var el=$('#transp'); if(!el)return;
+    var names=transpNames(), cur=el.value;
+    el.innerHTML=names.map(function(n){return '<option value="'+esc(n)+'">'+esc(n)+'</option>'}).join('');
+    el.value=(cur&&names.indexOf(cur)>=0)?cur:names[0];
+  }
+  function renderTransp(){
+    if(!$('#tr-lista'))return;
+    var names=transpNames();
+    $('#tr-count').textContent='Empresas de transporte · '+names.length;
+    $('#tr-lista').innerHTML=names.map(function(n){
+      var t=transps.find(function(x){return x.nombre===n});
+      if(n===TRANSP_OTRO||!t)return '<div class="card"><div class="info"><div class="dest">'+esc(n)+'</div>'+(n===TRANSP_OTRO?'<div class="meta">Siempre disponible</div>':'<div class="meta">Lista inicial: se guarda sola al entrar un administrador</div>')+'</div></div>';
+      return '<div class="card"><div class="info"><div class="dest">'+esc(n)+'</div></div><div class="row"><button class="btn small danger" data-trdel="'+esc(t.id)+'">'+(trDelArmed===t.id?'Tocá de nuevo para eliminar':'Eliminar')+'</button></div></div>';
+    }).join('');
+  }
+  $('#f-tr').addEventListener('submit',function(e){
+    e.preventDefault(); if(!isAdmin())return;
+    var n=$('#tr-nombre').value.trim().replace(/\s+/g,' '), err=$('#err-tr');
+    if(!n)return;
+    if(norm(n)===norm(TRANSP_OTRO)||transpNames().some(function(x){return norm(x)===norm(n)})){err.textContent='Esa empresa ya está en la lista.';return}
+    err.textContent='';
+    var o={id:uid('T'),nombre:n,orden:Date.now()}; transps.push(o);
+    sPut('transportes',o).then(function(){$('#tr-nombre').value=''; renderTransp(); fillTransp(); renderHome(); toast('Empresa agregada')});
+  });
+  $('#tr-lista').addEventListener('click',function(e){
+    if(!isAdmin())return;
+    var b=e.target.closest('[data-trdel]'); if(!b)return;
+    var t=transps.find(function(x){return x.id===b.dataset.trdel}); if(!t)return;
+    if(trDelArmed!==t.id){trDelArmed=t.id; renderTransp(); setTimeout(function(){if(trDelArmed===t.id){trDelArmed=null; renderTransp()}},4000); return}
+    trDelArmed=null; transps=transps.filter(function(x){return x.id!==t.id});
+    sDel('transportes',t.id).then(function(){renderTransp(); fillTransp(); renderHome(); toast('Empresa eliminada de la lista')});
+  });
   function guardNames(){return guards.map(function(x){return x.nombre}).sort(function(a,b){return a.localeCompare(b,'es')})}
   function fillGuardSel(sel,wrap,key){
     var el=$(sel), w=$(wrap); if(!el||!w)return;
@@ -1641,7 +1790,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     if(im&&!$('#lightbox').contains(im)){
       e.preventDefault();
       var card=im.closest('.card'), code=card&&card.querySelector('.code')?card.querySelector('.code').textContent.split(' ')[0]:'paquete';
-      openLightbox(im.src,code+(im.classList.contains('zoomable')?'-firma.png':'-foto.jpg')); return;
+      openLightbox(im.src,code+(im.classList.contains('zoomable')?'-firma.png':'-foto'+(im.dataset.fn||'')+'.jpg')); return;
     }
     if(e.target.id==='lightbox'||e.target.id==='lb-close')closeLightbox();
   });
