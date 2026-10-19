@@ -609,7 +609,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
 </div>
 <script>
 (function(){
-  var APP_VERSION=40; /* se actualiza en cada entrega: también define el número de la caché (sw.js) y el nombre del zip */
+  var APP_VERSION=41; /* se actualiza en cada entrega: también define el número de la caché (sw.js) y el nombre del zip */
   var $=function(s){return document.querySelector(s)};
   var $$=function(s){return Array.prototype.slice.call(document.querySelectorAll(s))};
   $('#app-foot').textContent='Demo 0.'+APP_VERSION+'v';
@@ -1676,13 +1676,27 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
       '<div class="row" style="margin-top:10px"><button type="button" class="btn primary" id="imp-add">Agregar a la lista</button><button type="button" class="btn" id="imp-rep">Reemplazar la lista</button></div>';
   }
   $('#mor-review').addEventListener('click',function(){if(!isAdmin())return; showPreview(rowsToResidents(textToRows($('#mor-text').value)))});
+  /* guardar un archivo: en celular abre el menú de compartir/guardar (Archivos, Drive, WhatsApp...); si no, descarga normal */
+  function saveFile(blob,name){
+    var file=null; try{file=new File([blob],name,{type:blob.type})}catch(e){}
+    var mobile=/Android|iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+    function plain(){
+      var url=URL.createObjectURL(blob), a=document.createElement('a');
+      a.href=url; a.download=name; a.style.display='none'; document.body.appendChild(a); a.click();
+      setTimeout(function(){a.remove(); URL.revokeObjectURL(url)},4000);
+      toast('Descargando '+name+'… Si no aparece, revisá la carpeta Descargas.');
+    }
+    if(mobile&&file&&navigator.canShare&&navigator.canShare({files:[file]})){
+      navigator.share({files:[file],title:name}).catch(function(err){if(err&&err.name==='AbortError')return; plain()});
+    }else plain();
+  }
   /* Excel de muestra para la carga masiva */
   $('#mor-sample').addEventListener('click',function(){
     var head=['Nombre','Unidad','Teléfono','Servicio'];
     var ej=[['Pérez Juan','1° A','11 5555 0001','Consorcio Torre Norte'],['Gómez Ana','1° B','11 5555 0002','Consorcio Torre Norte'],['López María','2° A','11 5555 0003','Consorcio Torre Norte'],['Rodríguez Carlos','PB 1','11 5555 0004','Consorcio Torre Sur']];
     if(!window.XLSX){
       var csv=[head].concat(ej).map(function(r){return r.join(',')}).join('\n');
-      var a=document.createElement('a'); a.href=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv'})); a.download='muestra-moradores.csv'; document.body.appendChild(a); a.click(); a.remove(); return;
+      saveFile(new Blob(['\ufeff'+csv],{type:'text/csv'}),'muestra-moradores.csv'); return;
     }
     var ws=XLSX.utils.aoa_to_sheet([head].concat(ej)); ws['!cols']=[{wch:26},{wch:10},{wch:18},{wch:28}];
     var info=[['Cómo cargar la lista de moradores'],[''],
@@ -1695,7 +1709,8 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
       ['7. Guardá el archivo y subilo desde "Elegir archivo" en Moradores.']];
     var wi=XLSX.utils.aoa_to_sheet(info); wi['!cols']=[{wch:110}];
     var wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Moradores'); XLSX.utils.book_append_sheet(wb,wi,'Instrucciones');
-    XLSX.writeFile(wb,'muestra-moradores.xlsx');
+    var out=XLSX.write(wb,{bookType:'xlsx',type:'array'});
+    saveFile(new Blob([out],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),'muestra-moradores.xlsx');
   });
   $('#mor-file').addEventListener('change',function(e){
     if(!isAdmin())return;
