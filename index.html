@@ -167,6 +167,10 @@ a.btn{display:flex; align-items:center; justify-content:center; text-decoration:
 img.zoomable{cursor:zoom-in; background:#fff; border:1px solid var(--line); border-radius:12px; max-width:100%}
 .alert-venc{display:flex; align-items:center; gap:12px; width:100%; text-align:left; font:inherit; background:var(--warn-bg); color:var(--warn); border:1px solid var(--warn); border-radius:16px; padding:12px 14px; cursor:pointer}
 .alert-venc .e{font-size:22px; flex:none} .alert-venc b{display:block; font-size:15px} .alert-venc small{display:block; font-size:13px; opacity:.9; margin-top:2px}
+.chk-list{display:flex; flex-direction:column; gap:6px}
+.chk-list label{display:flex; align-items:center; gap:10px; text-transform:none; letter-spacing:0; font-size:16px; font-weight:400; color:var(--ink); margin:0; min-height:44px; background:var(--field); border:1px solid var(--line); border-radius:12px; padding:6px 12px; cursor:pointer}
+.chk-list input{width:22px; height:22px; flex:none; accent-color:var(--accent)}
+.edif-sel{width:auto; max-width:100%; padding:8px 10px; font-size:14px; border-radius:10px}
 .thumb.empty{display:grid; place-items:center; color:var(--muted); font-size:11px; text-align:center}
 .info{min-width:0; flex:1}
 .code{font-family:var(--f-mono); font-size:12px; color:var(--muted)}
@@ -260,6 +264,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
       <div class="chips" id="chips"></div>
     </div>
     <button class="alert-venc admin-only" id="aviso-venc" type="button" data-go="paquetes" hidden></button>
+    <div class="alert-venc" id="aviso-sinedif" role="status" style="cursor:default" hidden><span class="e">🏢</span><span><b>No tenés ningún edificio asignado</b><small>Pedile a un administrador que te asigne uno para ver y cargar paquetes.</small></span></div>
     <div class="tiles" id="tiles"></div>
     <div class="tip">
       <h3>💡 Consejo</h3>
@@ -295,6 +300,12 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
       <div>
         <label for="unidad">Unidad / oficina</label>
         <input type="text" id="unidad" placeholder="Ej.: 4° B, Oficina 12" required>
+      </div>
+      <div id="edif-wrap" hidden>
+        <label for="edif-ro" id="edif-lbl">Edificio 🔒</label>
+        <input type="text" id="edif-ro" readonly aria-readonly="true" tabindex="-1" style="opacity:.85">
+        <select id="f-edif" hidden></select>
+        <p class="hint" id="edif-hint" style="margin-top:6px"></p>
       </div>
       <div id="tel-wrap" hidden>
         <label for="tel-aviso" id="tel-lbl">Teléfono para avisarle (opcional)</label>
@@ -469,6 +480,11 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
         </div>
         <div id="u-pin-wrap"><label for="u-pin" id="u-pin-lbl">Contraseña (mínimo 6 caracteres)</label><input type="password" id="u-pin" maxlength="40" autocomplete="new-password"></div>
       </div>
+      <div id="u-edif-wrap">
+        <span class="lbl">Edificios que cubre</span>
+        <div id="u-edif" class="chk-list"></div>
+        <p class="hint">Un vigilador solo ve y carga paquetes de los edificios que marques. Los edificios se cargan antes en Servicios.</p>
+      </div>
       <p class="hint">El correo se usa para ingresar. Los vigiladores cargan y entregan paquetes. Los administradores además manejan moradores, servicios y usuarios.</p>
       <p class="err" id="err-user" role="alert"></p>
       <button class="btn" type="button" id="user-reset" hidden>Enviar correo para cambiar la contraseña</button>
@@ -514,7 +530,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
 
 <script>
 (function(){
-  var APP_VERSION=32; /* se actualiza en cada entrega: también define el número de la caché (sw.js) y el nombre del zip */
+  var APP_VERSION=33; /* se actualiza en cada entrega: también define el número de la caché (sw.js) y el nombre del zip */
   var $=function(s){return document.querySelector(s)};
   var $$=function(s){return Array.prototype.slice.call(document.querySelectorAll(s))};
   $('#app-foot').textContent='Demo 0.'+APP_VERSION+'v';
@@ -596,7 +612,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     clearTimeout(renderT);
     renderT=setTimeout(function(){
       if(!session)return;
-      renderPaquetes(); renderRes(); renderServ(); fillGuards();
+      renderPaquetes(); renderRes(); renderServ(); fillGuards(); updateEdifWrap();
       if(!$('#v-guardias').hidden)renderGuards();
       if(!$('#v-usuarios').hidden)renderUsers();
     },60);
@@ -608,11 +624,25 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
       assign(arr); scheduleRender();
     },function(e){ if(session)toast('No se pudieron leer los datos de '+name+'.') }));
   }
+  function myEdif(){return (session&&Array.isArray(session.edificios))?session.edificios:[]}
+  /* un vigilador baja solo los datos de sus edificios (una consulta por edificio) */
+  function listenBy(name,field,vals,assign){
+    var parts={};
+    if(!vals.length){assign([]); scheduleRender(); return}
+    vals.forEach(function(v){
+      unsubs.push(db.collection(name).where(field,'==',v).onSnapshot(function(snap){
+        var arr=[]; snap.forEach(function(d){var o=d.data(); o.id=d.id; arr.push(o)});
+        parts[v]=arr; var all=[]; Object.keys(parts).forEach(function(k){all=all.concat(parts[k])});
+        assign(all); scheduleRender();
+      },function(e){ if(session)toast('No se pudieron leer los datos de '+name+'.') }));
+    });
+  }
   function startListeners(){
     stopListeners();
     itemsReady=false; lastClean=0;
-    listen('paquetes',function(a){items=a; itemsReady=true; tryClean()});
-    listen('moradores',function(a){residents=a});
+    var onP=function(a){items=a; itemsReady=true; tryClean()}, onM=function(a){residents=a};
+    if(isAdmin()){listen('paquetes',onP); listen('moradores',onM)}
+    else{items=[]; residents=[]; listenBy('paquetes','servicio',myEdif(),onP); listenBy('moradores','servicio',myEdif(),onM)}
     listen('servicios',function(a){servs=a});
     listen('guardias',function(a){guards=a});
     if(isAdmin())listen('usuarios',function(a){users=a});
@@ -630,6 +660,9 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
       if(!pr||pr.activo===false){logout('Tu acceso fue desactivado.'); return}
       var rol=pr.rol==='admin'?'admin':'vigilador', was=session.rol;
       session.nombre=pr.nombre||session.nombre; session.rol=rol;
+      var ne=Array.isArray(pr.edificios)?pr.edificios.slice():[], edChanged=JSON.stringify(ne)!==JSON.stringify(session.edificios||[]);
+      session.edificios=ne;
+      if(rol===was&&edChanged&&rol!=='admin'){renderMenu(); startListeners(); toast('Tus edificios fueron actualizados'); return}
       if(rol!==was){
         document.body.setAttribute('data-role',rol); renderMenu(); startListeners(); go('home');
       }else{renderMenu(); applySettings()}
@@ -704,10 +737,11 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     if(v==='home')renderHome();
     if(v==='listo')renderListo();
     if(v==='cuenta')renderCuenta();
-    if(v==='usuarios')renderUsers();
+    if(v==='usuarios'){renderUsers(); if(!editingUser)fillUserEdif([])}
     if(v==='servicios')renderServ();
     if(v==='guardias')renderGuards();
     if(v==='cargar'||v==='entregar')fillGuards();
+    if(v==='cargar')updateEdifWrap();
     if(v==='login')renderLogin();
     if(v==='olvido'){$('#o-mail').value=$('#l-user')?$('#l-user').value.trim():''; $('#err-olvido').textContent=''; $('#olvido-res').hidden=true; $('#olvido-res').innerHTML=''}
     window.scrollTo(0,0);
@@ -798,7 +832,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
       var pr=d.exists?d.data():null;
       if(!pr){deny('Tu correo todavía no tiene acceso a la app. Pedile a un administrador que te dé de alta.'); return}
       if(pr.activo===false){deny('Tu perfil está desactivado. Consultá con un administrador.'); return}
-      startSession({id:email,usuario:email,nombre:pr.nombre||email,rol:pr.rol==='admin'?'admin':'vigilador',activo:true});
+      startSession({id:email,usuario:email,nombre:pr.nombre||email,rol:pr.rol==='admin'?'admin':'vigilador',activo:true,edificios:Array.isArray(pr.edificios)?pr.edificios.slice():[]});
     }).catch(function(e){
       deny((e&&e.code==='permission-denied')?'Tu correo todavía no tiene acceso a la app. Pedile a un administrador que te dé de alta.':'No se pudo verificar tu perfil. Revisá la conexión e intentá de nuevo.');
     });
@@ -914,6 +948,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     if(!session)return;
     var np=items.filter(function(x){return x.estado==='pendiente'}).length;
     $('#hero-title').textContent='👋 Hola, '+firstName(session.nombre);
+    $('#aviso-sinedif').hidden=!(session&&!isAdmin()&&!myEdif().length);
     var pv=isAdmin()?porVencer():[], av=$('#aviso-venc');
     if(pv.length){
       var mn=Math.min.apply(null,pv.map(diasRestantes));
@@ -974,7 +1009,29 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
   function residentFor(dest,unidad){
     return residents.find(function(r){return norm(r.nombre)===norm(dest)&&norm(r.unidad)===norm(unidad)})||null;
   }
+  /* edificio del paquete: sale del morador; si no está en la lista, del edificio del vigilador */
+  function edifForNew(mor){
+    if(mor&&mor.servicio)return mor.servicio;
+    if(isAdmin())return '';
+    var e=myEdif();
+    if(e.length===1)return e[0];
+    return e.indexOf($('#f-edif').value)>=0?$('#f-edif').value:'';
+  }
+  function updateEdifWrap(){
+    var w=$('#edif-wrap'); if(!session||isAdmin()){w.hidden=true; return}
+    var e=myEdif(), d=$('#dest').value.trim(), u=$('#unidad').value.trim(), r=(d&&u)?residentFor(d,u):null;
+    var sel=$('#f-edif'), ro=$('#edif-ro'), hint=$('#edif-hint');
+    w.hidden=false;
+    if(!e.length){sel.hidden=true; ro.hidden=false; ro.value='Sin edificio asignado'; hint.textContent='Pedile a un administrador que te asigne un edificio.'; return}
+    if(r&&r.servicio){sel.hidden=true; ro.hidden=false; ro.value=r.servicio; hint.textContent='Sale del morador elegido.'; return}
+    if(e.length===1){sel.hidden=true; ro.hidden=false; ro.value=e[0]; hint.textContent=''; return}
+    var cur=sel.value;
+    sel.innerHTML='<option value="">— Elegí el edificio —</option>'+e.map(function(n){return '<option value="'+esc(n)+'">'+esc(n)+'</option>'}).join('');
+    sel.value=e.indexOf(cur)>=0?cur:'';
+    sel.hidden=false; ro.hidden=true; hint.textContent='Este destinatario no está en la lista: elegí en qué edificio se recibe.';
+  }
   function updateTelWrap(){
+    updateEdifWrap();
     var d=$('#dest').value.trim(), u=$('#unidad').value.trim();
     var r=(d&&u)?residentFor(d,u):null, inp=$('#tel-aviso');
     $('#tel-wrap').hidden=!(d&&u);
@@ -998,6 +1055,9 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     if(!dest||!unidad){err.textContent='Completá destinatario y unidad.';return}
     var mor=residentFor(dest,unidad), tel=$('#tel-aviso').value.trim();
     if(!mor&&tel&&!validPhone(tel)){err.textContent='Revisá el teléfono: ingresalo con característica, por ejemplo 11 5555 1111.';return}
+    var ed=edifForNew(mor);
+    if(!isAdmin()&&!myEdif().length){err.textContent='No tenés un edificio asignado. Pedile a un administrador que te asigne uno.';return}
+    if(!isAdmin()&&!ed){err.textContent='Elegí el edificio al que pertenece el paquete.';return}
     var recibe=guardNames().length?$('#g-recibe').value:session.nombre;
     if(!recibe){err.textContent='Elegí quién recibe el paquete.';return}
     if(guardNames().length)lsSet('paq_last_recibe',recibe);
@@ -1005,7 +1065,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     var btnC=$('#f-cargar button[type=submit]'); btnC.disabled=true;
     nextNumber().then(function(nn){
       var it={id:nn.id,n:nn.n,ingreso:new Date().toISOString(),vigilador:recibe,registro_por:session.nombre,destinatario:dest,unidad:unidad,foto:photo,estado:'pendiente',
-              moradorId:mor?mor.id:'', servicio:mor?(mor.servicio||''):'', tel_aviso:(!mor&&tel)?tel:''};
+              moradorId:mor?mor.id:'', servicio:ed, tel_aviso:(!mor&&tel)?tel:''};
       items.push(it); lastPkg=it;
       return sPut('paquetes',it);
     }).then(function(){
@@ -1051,7 +1111,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
         '<div class="dest">'+esc(it.destinatario)+'</div><div class="unit">'+svPill(it)+esc(it.unidad)+'</div>'+
         '<div class="meta">Ingresó '+esc(fmt(it.ingreso))+(it.vigilador?' · '+esc(it.vigilador):'')+'</div>'+
         '<div class="meta">'+(it.avisado?'Aviso abierto '+esc(fmt(it.avisado)):'Sin avisar')+'</div></div></div>'+
-        '<div class="row">'+avisoBtn(it)+'<button class="btn primary" data-entregar="'+esc(it.id)+'">Entregar</button></div>'+delBtn(it)+'</div>';
+        '<div class="row">'+avisoBtn(it)+'<button class="btn primary" data-entregar="'+esc(it.id)+'">Entregar</button></div>'+edifSel(it)+delBtn(it)+'</div>';
     }).join(''):(pend.length?'<div class="empty-state">Ningún paquete coincide con la búsqueda.</div>':
       '<div class="empty-state"><strong>No hay paquetes pendientes</strong>Los paquetes que cargues aparecen acá hasta que alguien los retire.</div>');
     $('#lista-hist').innerHTML=done.length?done.map(function(it){
@@ -1065,7 +1125,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
         '<dt>Aviso</dt><dd>'+(it.avisado?'Abierto '+esc(fmt(it.avisado))+(it.avisado_por?' · '+esc(it.avisado_por):''):'No se avisó')+'</dd>'+
         '<dt>Retiró</dt><dd>'+esc(it.retira_nombre)+'</dd>'+
         '<dt>DNI</dt><dd>'+esc(it.retira_dni||'No registrado')+'</dd></dl>'+
-        (it.firma?'<img class="zoomable" alt="Firma de quien retiró: tocá para ampliar" src="'+it.firma+'">':'<p class="hint">Sin firma.</p>')+'</div></details>'+delBtn(it)+'</div>';
+        (it.firma?'<img class="zoomable" alt="Firma de quien retiró: tocá para ampliar" src="'+it.firma+'">':'<p class="hint">Sin firma.</p>')+'</div></details>'+edifSel(it)+delBtn(it)+'</div>';
     }).join(''):'<div class="empty-state"><strong>Todavía no hay entregas</strong>Cuando entregues un paquete, la constancia queda guardada acá.</div>';
     renderHome();
   }
@@ -1118,6 +1178,16 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
 
   /* eliminar paquetes (administrador) */
   var delPkgArmed=null;
+  function edifSel(it){
+    if(!isAdmin())return '';
+    var cur=svOf(it), names=servNames(); if(cur&&names.indexOf(cur)<0)names.push(cur);
+    return '<div class="row" style="align-items:center"><label style="margin:0;flex:0 0 auto">Edificio</label><select class="edif-sel" data-edifsel="'+esc(it.id)+'" aria-label="Edificio del paquete"><option value=""'+(cur?'':' selected')+'>Sin edificio</option>'+names.map(function(n){return '<option value="'+esc(n)+'"'+(n===cur?' selected':'')+'>'+esc(n)+'</option>'}).join('')+'</select></div>';
+  }
+  $('#v-paquetes').addEventListener('change',function(e){
+    var sl=e.target.closest('[data-edifsel]'); if(!sl||!isAdmin())return;
+    var it=items.find(function(x){return x.id===sl.dataset.edifsel}); if(!it)return;
+    it.servicio=sl.value; sPut('paquetes',it); toast('Edificio del paquete actualizado'); scheduleRender();
+  });
   function delBtn(it){
     return isAdmin()?'<button class="btn small danger" data-delpkg="'+esc(it.id)+'">'+(delPkgArmed===it.id?'Tocá de nuevo para eliminar':'Eliminar paquete')+'</button>':'';
   }
@@ -1441,13 +1511,20 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
       var self=session&&u.id===session.id;
       return '<div class="card"><div class="info"><div class="dest">'+esc(u.nombre)+(self?' (vos)':'')+'</div>'+
         '<div class="meta">correo: '+esc(u.usuario||u.id)+'</div>'+
-        '<div class="unit"><span class="pill '+(u.rol==='admin'?'adm':'vig')+'">'+rolName(u.rol)+'</span>'+(u.activo?'':' <span class="pill off">Inactivo</span>')+'</div></div>'+
+        '<div class="unit"><span class="pill '+(u.rol==='admin'?'adm':'vig')+'">'+rolName(u.rol)+'</span>'+(u.activo?'':' <span class="pill off">Inactivo</span>')+'</div>'+(u.rol==='admin'?'':'<div class="meta">'+((u.edificios&&u.edificios.length)?'Edificios: '+esc(u.edificios.join(', ')):'<span class="pill wait">Sin edificio asignado</span>')+'</div>')+'</div>'+
         '<div class="row"><button class="btn small" data-uedit="'+esc(u.id)+'">Editar</button>'+
         (self?'':'<button class="btn small" data-utoggle="'+esc(u.id)+'">'+(u.activo?'Desactivar':'Activar')+'</button><button class="btn small danger" data-udel="'+esc(u.id)+'">'+(delUserArmed===u.id?'Tocá de nuevo para eliminar':'Eliminar')+'</button>')+'</div></div>';
     }).join('');
   }
+  function fillUserEdif(sel){
+    var names=servNames(); (sel||[]).forEach(function(n){if(names.indexOf(n)<0)names.push(n)});
+    $('#u-edif').innerHTML=names.length?names.map(function(n,i){return '<label><input type="checkbox" value="'+esc(n)+'"'+((sel||[]).indexOf(n)>=0?' checked':'')+'><span>'+esc(n)+'</span></label>'}).join(''):'<p class="hint">Todavía no hay servicios cargados. Cargalos en la sección Servicios.</p>';
+    $('#u-edif-wrap').hidden=($('#u-rol').value==='admin');
+  }
+  function pickedEdif(){return $$('#u-edif input:checked').map(function(c){return c.value})}
+  $('#u-rol').addEventListener('change',function(){fillUserEdif(pickedEdif())});
   function resetUserForm(){
-    editingUser=null; $('#f-user').reset(); $('#user-form-title').textContent='Nuevo perfil'; $('#user-cancel').hidden=true;
+    editingUser=null; $('#f-user').reset(); fillUserEdif([]); $('#user-form-title').textContent='Nuevo perfil'; $('#user-cancel').hidden=true;
     $('#u-usuario').readOnly=false; $('#u-pin-wrap').hidden=false; $('#user-reset').hidden=true; $('#user-save').disabled=false;
     $('#u-pin-lbl').textContent='Contraseña inicial (mínimo 6 caracteres)'; $('#err-user').textContent='';
   }
@@ -1472,15 +1549,19 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
       var u=users.find(function(x){return x.id===editingUser}); if(!u)return;
       if(lastAdminGuard(u,rol,u.activo)){err.textContent='Tiene que quedar al menos un administrador activo.';return}
       err.textContent='';
-      u.nombre=n; u.rol=rol;
+      var ed1=rol==='admin'?[]:pickedEdif();
+      if(rol==='vigilador'&&servs.length&&!ed1.length){err.textContent='Marcá al menos un edificio para este vigilador.';return}
+      u.nombre=n; u.rol=rol; u.edificios=ed1;
       sPut('usuarios',u).then(function(){
         resetUserForm(); renderUsers(); renderHome(); toast('Perfil actualizado');
       });
     }else{
       if(users.some(function(x){return x.id===us})){err.textContent='Ese correo ya tiene un perfil.';return}
       if(!validPass(pass)){err.textContent='La contraseña debe tener al menos 6 caracteres.';return}
+      var ed2=rol==='admin'?[]:pickedEdif();
+      if(rol==='vigilador'&&servs.length&&!ed2.length){err.textContent='Marcá al menos un edificio para este vigilador.';return}
       err.textContent=''; $('#user-save').disabled=true;
-      var prof={id:us,usuario:us,nombre:n,rol:rol,activo:true}, sa=secondaryAuth();
+      var prof={id:us,usuario:us,nombre:n,rol:rol,activo:true,edificios:ed2}, sa=secondaryAuth();
       function write(extra){
         return sPut('usuarios',prof).then(function(){resetUserForm(); renderUsers(); renderHome(); toast(extra||'Perfil creado')});
       }
@@ -1507,7 +1588,7 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
     if(delUserArmed){delUserArmed=null; renderUsers()}
     if(ed){
       var u=users.find(function(x){return x.id===ed.dataset.uedit}); if(!u)return;
-      editingUser=u.id; $('#u-nombre').value=u.nombre; $('#u-usuario').value=u.usuario||u.id; $('#u-rol').value=u.rol; $('#u-pin').value='';
+      editingUser=u.id; $('#u-nombre').value=u.nombre; $('#u-usuario').value=u.usuario||u.id; $('#u-rol').value=u.rol; $('#u-pin').value=''; fillUserEdif(u.edificios||[]);
       $('#u-usuario').readOnly=true; $('#u-pin-wrap').hidden=true; $('#user-reset').hidden=false;
       $('#user-form-title').textContent='Editar perfil';  $('#user-cancel').hidden=false;
       $('#f-user').scrollIntoView({behavior:'smooth',block:'center'});
