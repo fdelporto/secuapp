@@ -148,6 +148,9 @@ a.btn{display:flex; align-items:center; justify-content:center; text-decoration:
 .photo-drop .e{font-size:34px}
 .photo-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:6px}
 .photo-grid .photo-drop{margin:0; text-transform:none; letter-spacing:0; font-size:15px; color:var(--muted); position:relative}
+.fsheet{position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:60; display:flex; align-items:flex-end; justify-content:center}
+.fsheet[hidden]{display:none}
+.fsheet-box{width:100%; max-width:520px; background:var(--surface); border-radius:20px 20px 0 0; padding:16px 16px calc(16px + env(safe-area-inset-bottom)); display:grid; gap:10px}
 .photo-grid .photo-drop.main{grid-column:1 / -1; font-size:16px}
 .photo-grid .photo-drop.sm{min-height:96px}
 .photo-grid .photo-drop.sm .e{font-size:26px}
@@ -310,12 +313,14 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
       </div>
       <div>
         <span class="lbl">Fotos del paquete</span>
-        <p class="hint">La primera es obligatoria. Podés sumar hasta 2 más. Al tocar elegís entre sacar la foto o buscarla en la galería.</p>
+        <p class="hint">La primera es obligatoria. Podés sumar hasta 2 más. Al tocar un recuadro elegís entre sacar la foto o buscarla en la galería.</p>
         <div class="photo-grid">
-          <label class="photo-drop main" for="foto" id="drop"><span class="e">📷</span><span>Foto 1 (obligatoria)</span></label>
-          <label class="photo-drop sm" for="foto2" id="drop2"><span class="e">➕</span><span>Foto 2 (opcional)</span></label>
-          <label class="photo-drop sm" for="foto3" id="drop3"><span class="e">➕</span><span>Foto 3 (opcional)</span></label>
+          <label class="photo-drop main" data-slot="0" id="drop" role="button" tabindex="0"><span class="e">📷</span><span>Foto 1 (obligatoria)</span></label>
+          <label class="photo-drop sm" data-slot="1" id="drop2" role="button" tabindex="0"><span class="e">➕</span><span>Foto 2 (opcional)</span></label>
+          <label class="photo-drop sm" data-slot="2" id="drop3" role="button" tabindex="0"><span class="e">➕</span><span>Foto 3 (opcional)</span></label>
         </div>
+        <input type="file" id="in-cam" accept="image/*" capture="environment" hidden>
+        <input type="file" id="in-gal" accept="image/*" hidden>
         <input type="file" id="foto" accept="image/*" hidden>
         <input type="file" id="foto2" accept="image/*" hidden>
         <input type="file" id="foto3" accept="image/*" hidden>
@@ -594,9 +599,16 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
   </div>
 </div>
 
+<div id="foto-sheet" class="fsheet" hidden>
+  <div class="fsheet-box" role="dialog" aria-label="Agregar foto">
+    <button type="button" class="btn" id="fs-cam">📷 Sacar foto</button>
+    <button type="button" class="btn" id="fs-gal">🖼️ Galería</button>
+    <button type="button" class="btn" id="fs-x">Cancelar</button>
+  </div>
+</div>
 <script>
 (function(){
-  var APP_VERSION=38; /* se actualiza en cada entrega: también define el número de la caché (sw.js) y el nombre del zip */
+  var APP_VERSION=39; /* se actualiza en cada entrega: también define el número de la caché (sw.js) y el nombre del zip */
   var $=function(s){return document.querySelector(s)};
   var $$=function(s){return Array.prototype.slice.call(document.querySelectorAll(s))};
   $('#app-foot').textContent='Demo 0.'+APP_VERSION+'v';
@@ -1077,6 +1089,31 @@ dt{color:var(--muted)} dd{margin:0; overflow-wrap:anywhere}
         .catch(function(){toast('No se pudo leer la foto. Probá de nuevo.')});
       e.target.value='';
     });
+  });
+  /* tocar un recuadro: hoja con "Sacar foto" / "Galería" (la cámara directa no aparece sola en algunos celulares) */
+  var slotSel=0;
+  function loadInto(file,i){
+    if(!file)return;
+    compress(file,i?800:900,i?0.65:0.72).then(function(url){photos[i]=url; drawDrop(i)})
+      .catch(function(){toast('No se pudo leer la foto. Probá de nuevo.')});
+  }
+  function closeSheet(){$('#foto-sheet').hidden=true}
+  $('#f-cargar').addEventListener('click',function(e){
+    if(e.target.closest('[data-rmfoto]'))return;
+    var d=e.target.closest('[data-slot]'); if(!d)return;
+    e.preventDefault(); slotSel=+d.dataset.slot;
+    /* iPhone/iPad: su menú nativo ya ofrece Fototeca / Tomar foto. Android: solo muestra galería, por eso hoja propia con cámara */
+    if(/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1)){
+      $(['#foto','#foto2','#foto3'][slotSel]).click(); return;
+    }
+    $('#foto-sheet').hidden=false;
+  });
+  $('#fs-cam').addEventListener('click',function(){closeSheet(); $('#in-cam').click()});
+  $('#fs-gal').addEventListener('click',function(){closeSheet(); $('#in-gal').click()});
+  $('#fs-x').addEventListener('click',closeSheet);
+  $('#foto-sheet').addEventListener('click',function(e){if(e.target.id==='foto-sheet')closeSheet()});
+  ['#in-cam','#in-gal'].forEach(function(sel){
+    $(sel).addEventListener('change',function(e){loadInto(e.target.files&&e.target.files[0],slotSel); e.target.value=''});
   });
   /* quitar una foto opcional (la 1 solo se reemplaza) */
   $('#f-cargar').addEventListener('click',function(e){
